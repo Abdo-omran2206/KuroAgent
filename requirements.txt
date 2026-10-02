@@ -1,0 +1,20 @@
+requests>=2.25.1
+rich>=13.0.0
+typer>=0.9.0
+prompt_toolkit>=3.0.0
+python-dotenv>=1.0.0
+
+# Voice & Audio
+edge-tts>=6.1.9
+pygame>=2.6.0
+SpeechRecognition>=3.10.0
+pyaudio>=0.2.14         # Optional: for microphone STT
+
+# Vision
+Pillow>=10.0.0          # Optional: image processing helpers
+
+# Web Automation
+beautifulsoup4>=4.12.0  # Optional: enhanced web scraping
+
+# Build / Distribution
+pyinstaller>=6.0.0      # Optional: for build_exe.py
