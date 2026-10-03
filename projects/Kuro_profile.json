@@ -21,7 +21,6 @@
     "tools",
     "tests",
     "build",
-    "dist",
     "brain"
   ],
   "scripts": {},
@@ -42,6 +41,6 @@
   ],
   "build_command": "",
   "test_command": "",
-  "git_status": "42 modified/untracked files",
+  "git_status": "6 modified/untracked files",
   "architecture_hints": []
 }

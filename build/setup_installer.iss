@@ -1,11 +1,11 @@
 ; Script generated for Inno Setup Installer Generator
 ; KURO 2.0 Autonomous CLI AI System Assistant Setup
 
-#define MyAppName "KURO AI Assistant"
+#define MyAppName "KuroCode"
 #define MyAppVersion "2.0"
 #define MyAppPublisher "Akira Omran"
 #define MyAppURL "https://github.com/Abdo-omran2206/KuroAgent"
-#define MyAppExeName "KURO.exe"
+#define MyAppExeName "KuroCode.exe"
 
 [Setup]
 AppId={{D37F89B2-4E21-4F25-8B9A-0A77121E90F4}
@@ -18,7 +18,7 @@ AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 OutputDir=..\dist
-OutputBaseFilename=KURO_v2_Setup
+OutputBaseFilename=KuroCode_v2_Setup
 SetupIconFile=..\assets\kuro_icon.ico
 Compression=lzma
 SolidCompression=yes

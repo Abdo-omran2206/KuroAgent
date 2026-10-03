@@ -8,6 +8,8 @@ import typer
 # Suppress pygame startup banner before any import triggers it
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
+# Fix for rich._unicode_data version resolution (prevents No module named 'rich._unicode_data.unicode17-0-0')
+os.environ.setdefault("UNICODE_VERSION", "15.1.0")
 
 # Force UTF-8 output on Windows so Rich spinners and Unicode chars work
 if sys.platform == "win32":
@@ -15,6 +17,23 @@ if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+
+# Defensive compatibility patch for Rich unicode data tables
+try:
+    import rich._unicode_data
+    _orig_rich_unicode_load = rich._unicode_data.load
+    def _safe_rich_unicode_load(unicode_version="auto"):
+        try:
+            return _orig_rich_unicode_load(unicode_version)
+        except Exception:
+            try:
+                return _orig_rich_unicode_load("15.1.0")
+            except Exception:
+                from rich.cells import CellTable
+                return CellTable(frozenset())
+    rich._unicode_data.load = _safe_rich_unicode_load
+except Exception:
+    pass
 
 from rich.console import Console
 from rich.panel import Panel

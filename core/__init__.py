@@ -1,7 +1,7 @@
-"""
-KURO Core Module Package
-Contains configuration, LLM dispatching, ReAct agent loop, SQLite brain storage, memory management, and personality profile.
-"""
+import os
+
+# Fix for rich._unicode_data version resolution
+os.environ.setdefault("UNICODE_VERSION", "15.1.0")
 
 from core.config import (
     BASE_DIR,
