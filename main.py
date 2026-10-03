@@ -18,20 +18,31 @@ if sys.platform == "win32":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True)
     os.environ.setdefault("PYTHONIOENCODING", "utf-8")
 
-# Defensive compatibility patch for Rich unicode data tables
+# Bulletproof compatibility patch for Rich unicode data tables
 try:
+    import importlib
     import rich._unicode_data
-    _orig_rich_unicode_load = rich._unicode_data.load
-    def _safe_rich_unicode_load(unicode_version="auto"):
+    import rich.cells
+    from rich.cells import CellTable
+
+    _cached_cell_table = None
+    for _ver in ("15-1-0", "15-0-0", "14-0-0", "13-0-0", "12-1-0", "17-0-0", "16-0-0", "10-0-0"):
         try:
-            return _orig_rich_unicode_load(unicode_version)
+            _m = importlib.import_module(f"rich._unicode_data.unicode{_ver}")
+            if hasattr(_m, "cell_table") and isinstance(_m.cell_table, CellTable):
+                _cached_cell_table = _m.cell_table
+                break
         except Exception:
-            try:
-                return _orig_rich_unicode_load("15.1.0")
-            except Exception:
-                from rich.cells import CellTable
-                return CellTable(frozenset())
-    rich._unicode_data.load = _safe_rich_unicode_load
+            continue
+
+    if _cached_cell_table is None:
+        _cached_cell_table = CellTable(unicode_version="15.1.0", widths=(), narrow_to_wide=frozenset())
+
+    def _bulletproof_unicode_load(unicode_version="auto"):
+        return _cached_cell_table
+
+    rich._unicode_data.load = _bulletproof_unicode_load
+    rich.cells.load_cell_table = _bulletproof_unicode_load
 except Exception:
     pass
 
