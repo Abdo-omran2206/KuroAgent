@@ -4,7 +4,7 @@
 #define MyAppName "KURO AI Assistant"
 #define MyAppVersion "2.0"
 #define MyAppPublisher "Akira Omran"
-#define MyAppURL "https://github.com/akiraomran/kuro"
+#define MyAppURL "https://github.com/Abdo-omran2206/KuroAgent"
 #define MyAppExeName "KURO.exe"
 
 [Setup]
@@ -29,13 +29,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "addtopath"; Description: "Add KURO to System PATH environment variable"; GroupDescription: "System Integration"
 
 [Files]
-Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\assets\kuro_icon.png"; DestDir: "{app}\assets"; Flags: ignoreversion
-Source: "..\assets\kuro_icon.ico"; DestDir: "{app}\assets"; Flags: ignoreversion
-Source: "..\.env.example"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\KURO\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

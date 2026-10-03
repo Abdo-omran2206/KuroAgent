@@ -5,13 +5,32 @@ from typing import List, Dict, Any, Optional
 from core import config
 
 
+def _normalize_memory_item(item: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensures memory dictionary has consistent user, assistant, user_text, and assistant_text keys."""
+    user = item.get("user") or item.get("user_text") or ""
+    assistant = item.get("assistant") or item.get("assistant_text") or ""
+    timestamp = item.get("timestamp", time.time())
+    metadata = item.get("metadata") or {}
+    summary = item.get("summary")
+
+    return {
+        "timestamp": timestamp,
+        "user": user,
+        "assistant": assistant,
+        "user_text": user,
+        "assistant_text": assistant,
+        "metadata": metadata,
+        "summary": summary,
+    }
+
+
 def load_memory() -> List[Dict[str, Any]]:
-    """Loads memory items from SQLite database or JSON file fallback."""
+    """Loads memory items from SQLite database or JSON file fallback with normalized keys."""
     try:
         from core import memory_db
         history = memory_db.get_chat_history(limit=config.MAX_MEMORY_ITEMS)
         if history:
-            return history
+            return [_normalize_memory_item(h) for h in history]
     except Exception:
         pass
 
@@ -22,7 +41,7 @@ def load_memory() -> List[Dict[str, Any]]:
         with open(memory_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             if isinstance(data, list):
-                return data
+                return [_normalize_memory_item(d) for d in data if isinstance(d, dict)]
             return []
     except Exception:
         return []
@@ -39,12 +58,12 @@ def save_memory(user_input: str, response: str, metadata: Dict[str, Any] = None)
 
     # Also update JSON cache
     memory = load_memory()
-    entry = {
+    entry = _normalize_memory_item({
         "timestamp": time.time(),
         "user": user_input,
         "assistant": response,
         "metadata": metadata or {}
-    }
+    })
     memory.append(entry)
 
     # Trim memory to maximum items
@@ -73,7 +92,9 @@ def summarize_memory_async() -> None:
             history = load_memory()
             if not history:
                 return
-            formatted = "\n".join([f"User: {h['user']}\nKURO: {h['assistant']}" for h in history[-10:]])
+            formatted = "\n".join([f"User: {h['user']}\nKURO: {h['assistant']}" for h in history[-10:] if h.get("user")])
+            if not formatted.strip():
+                return
             prompt = (
                 "Summarize the key decisions, user directives, technical facts, and ongoing task state "
                 "from this conversation history into 3-5 concise bullet points:\n\n" + formatted
@@ -124,8 +145,11 @@ def get_formatted_context(limit: int = 5) -> str:
         recent = memory[-limit:]
         lines.append("--- Recent Conversation Context ---")
         for item in recent:
-            lines.append(f"User: {item.get('user', '')}")
-            lines.append(f"KURO: {item.get('assistant', '')}")
+            u = item.get("user") or item.get("user_text") or ""
+            a = item.get("assistant") or item.get("assistant_text") or ""
+            if u:
+                lines.append(f"User: {u}")
+            if a:
+                lines.append(f"KURO: {a}")
 
     return "\n".join(lines)
-

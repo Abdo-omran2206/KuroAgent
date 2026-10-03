@@ -81,7 +81,7 @@ def init_db() -> None:
             """
         )
 
-        # Skills Table
+        # Skills Table (legacy — kept for backward compatibility)
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS skills (
@@ -92,6 +92,88 @@ def init_db() -> None:
             )
             """
         )
+
+        # ── Semantic Memory (facts, knowledge, project info) ──────────────────
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS semantic_memory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                key TEXT UNIQUE NOT NULL,
+                value TEXT NOT NULL,
+                category TEXT DEFAULT 'general',
+                confidence REAL DEFAULT 1.0,
+                source TEXT DEFAULT '',
+                tags TEXT DEFAULT '[]',
+                created_at REAL,
+                updated_at REAL
+            )
+            """
+        )
+
+        # ── Procedural Memory (full structured skill system) ───────────────────
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS procedural_memory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT DEFAULT '',
+                workflow TEXT DEFAULT '',
+                required_tools TEXT DEFAULT '[]',
+                preconditions TEXT DEFAULT '[]',
+                known_failures TEXT DEFAULT '[]',
+                parameters TEXT DEFAULT '{}',
+                examples TEXT DEFAULT '[]',
+                version TEXT DEFAULT '1.0.0',
+                success_count INTEGER DEFAULT 0,
+                failure_count INTEGER DEFAULT 0,
+                created_at REAL,
+                updated_at REAL
+            )
+            """
+        )
+
+        # ── Task State Persistence ─────────────────────────────────────────────
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                task_id TEXT PRIMARY KEY,
+                goal TEXT NOT NULL,
+                state TEXT DEFAULT 'pending',
+                plan TEXT DEFAULT '{}',
+                steps_completed INTEGER DEFAULT 0,
+                steps_total INTEGER DEFAULT 0,
+                error TEXT,
+                verification_result TEXT,
+                retry_count INTEGER DEFAULT 0,
+                metadata TEXT DEFAULT '{}',
+                history TEXT DEFAULT '[]',
+                created_at REAL,
+                updated_at REAL
+            )
+            """
+        )
+
+        # ── Execution Metrics ──────────────────────────────────────────────────
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS execution_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id TEXT,
+                model TEXT,
+                provider TEXT,
+                input_tokens INTEGER DEFAULT 0,
+                output_tokens INTEGER DEFAULT 0,
+                tool_calls INTEGER DEFAULT 0,
+                retries INTEGER DEFAULT 0,
+                duration_seconds REAL DEFAULT 0,
+                success INTEGER DEFAULT 0,
+                verification_result TEXT,
+                estimated_cost REAL,
+                created_at REAL
+            )
+            """
+        )
+
 
 
 def save_chat_entry(user_text: str, assistant_text: str, metadata: Any = None) -> int:
@@ -445,6 +527,366 @@ def list_skills() -> List[Dict[str, Any]]:
             "created_at": row["created_at"]
         })
     return skills
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Semantic Memory CRUD
+# ═══════════════════════════════════════════════════════════════════════════
+
+def save_semantic_memory(
+    key: str,
+    value: str,
+    category: str = "general",
+    source: str = "",
+    confidence: float = 1.0,
+    tags: list = None,
+) -> None:
+    """Upserts a semantic fact."""
+    init_db()
+    now = time.time()
+    tags_str = json.dumps(tags or [])
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO semantic_memory (key, value, category, confidence, source, tags, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                value = excluded.value,
+                category = excluded.category,
+                confidence = excluded.confidence,
+                source = excluded.source,
+                tags = excluded.tags,
+                updated_at = excluded.updated_at
+            """,
+            (key, value, category, confidence, source, tags_str, now, now),
+        )
+
+
+def get_semantic_memory(key: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a semantic fact by key."""
+    init_db()
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM semantic_memory WHERE key = ?", (key,)
+        ).fetchone()
+    if not row:
+        return None
+    return _row_to_semantic(row)
+
+
+def search_semantic_memory(
+    query: str, category: Optional[str] = None, limit: int = 10
+) -> List[Dict[str, Any]]:
+    """Searches semantic memory by keyword match on key and value."""
+    init_db()
+    like = f"%{query}%"
+    with get_db() as conn:
+        if category:
+            rows = conn.execute(
+                """SELECT * FROM semantic_memory
+                   WHERE category = ? AND (key LIKE ? OR value LIKE ?)
+                   ORDER BY updated_at DESC LIMIT ?""",
+                (category, like, like, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """SELECT * FROM semantic_memory
+                   WHERE key LIKE ? OR value LIKE ?
+                   ORDER BY updated_at DESC LIMIT ?""",
+                (like, like, limit),
+            ).fetchall()
+    return [_row_to_semantic(r) for r in rows]
+
+
+def list_semantic_memory(category: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """Lists semantic memory entries optionally filtered by category."""
+    init_db()
+    with get_db() as conn:
+        if category:
+            rows = conn.execute(
+                "SELECT * FROM semantic_memory WHERE category = ? ORDER BY updated_at DESC LIMIT ?",
+                (category, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM semantic_memory ORDER BY updated_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return [_row_to_semantic(r) for r in rows]
+
+
+def _row_to_semantic(row) -> Dict[str, Any]:
+    tags = row["tags"]
+    try:
+        tags = json.loads(tags) if tags else []
+    except Exception:
+        tags = []
+    return {
+        "id": row["id"],
+        "key": row["key"],
+        "value": row["value"],
+        "category": row["category"],
+        "confidence": row["confidence"],
+        "source": row["source"],
+        "tags": tags,
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Procedural Memory CRUD
+# ═══════════════════════════════════════════════════════════════════════════
+
+def save_procedural_memory(data: Dict[str, Any]) -> None:
+    """Upserts a procedural skill/workflow."""
+    init_db()
+    now = time.time()
+    name = data.get("name", "")
+    if not name:
+        return
+
+    def _j(v, default="[]"):
+        if isinstance(v, (list, dict)):
+            return json.dumps(v)
+        return v or default
+
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO procedural_memory
+                (name, description, workflow, required_tools, preconditions,
+                 known_failures, parameters, examples, version,
+                 success_count, failure_count, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET
+                description = excluded.description,
+                workflow = excluded.workflow,
+                required_tools = excluded.required_tools,
+                preconditions = excluded.preconditions,
+                known_failures = excluded.known_failures,
+                parameters = excluded.parameters,
+                examples = excluded.examples,
+                version = excluded.version,
+                updated_at = excluded.updated_at
+            """,
+            (
+                name,
+                data.get("description", ""),
+                data.get("workflow", ""),
+                _j(data.get("required_tools", []), "[]"),
+                _j(data.get("preconditions", []), "[]"),
+                _j(data.get("known_failures", []), "[]"),
+                _j(data.get("parameters", {}), "{}"),
+                _j(data.get("examples", []), "[]"),
+                data.get("version", "1.0.0"),
+                data.get("success_count", 0),
+                data.get("failure_count", 0),
+                now,
+                now,
+            ),
+        )
+
+
+def get_procedural_memory(name: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a procedural skill by name."""
+    init_db()
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM procedural_memory WHERE name = ?", (name,)
+        ).fetchone()
+    return _row_to_procedural(row) if row else None
+
+
+def list_procedural_memory(limit: int = 50) -> List[Dict[str, Any]]:
+    """Lists all procedural skills."""
+    init_db()
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM procedural_memory ORDER BY name ASC LIMIT ?", (limit,)
+        ).fetchall()
+    return [_row_to_procedural(r) for r in rows]
+
+
+def update_skill_stats(name: str, success: bool) -> None:
+    """Increments success or failure count for a procedural skill."""
+    init_db()
+    field = "success_count" if success else "failure_count"
+    with get_db() as conn:
+        conn.execute(
+            f"UPDATE procedural_memory SET {field} = {field} + 1, updated_at = ? WHERE name = ?",
+            (time.time(), name),
+        )
+
+
+def _row_to_procedural(row) -> Dict[str, Any]:
+    def _pj(v, default):
+        try:
+            return json.loads(v) if v else default
+        except Exception:
+            return default
+
+    return {
+        "id": row["id"],
+        "name": row["name"],
+        "description": row["description"],
+        "workflow": row["workflow"],
+        "required_tools": _pj(row["required_tools"], []),
+        "preconditions": _pj(row["preconditions"], []),
+        "known_failures": _pj(row["known_failures"], []),
+        "parameters": _pj(row["parameters"], {}),
+        "examples": _pj(row["examples"], []),
+        "version": row["version"],
+        "success_count": row["success_count"],
+        "failure_count": row["failure_count"],
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Task State Persistence CRUD
+# ═══════════════════════════════════════════════════════════════════════════
+
+def save_task(data: Dict[str, Any]) -> None:
+    """Upserts a task state record."""
+    init_db()
+    now = time.time()
+
+    def _j(v, default="{}"):
+        if isinstance(v, (list, dict)):
+            return json.dumps(v)
+        return v or default
+
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO tasks
+                (task_id, goal, state, plan, steps_completed, steps_total,
+                 error, verification_result, retry_count, metadata, history,
+                 created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(task_id) DO UPDATE SET
+                goal = excluded.goal,
+                state = excluded.state,
+                plan = excluded.plan,
+                steps_completed = excluded.steps_completed,
+                steps_total = excluded.steps_total,
+                error = excluded.error,
+                verification_result = excluded.verification_result,
+                retry_count = excluded.retry_count,
+                metadata = excluded.metadata,
+                history = excluded.history,
+                updated_at = excluded.updated_at
+            """,
+            (
+                data.get("task_id", ""),
+                data.get("goal", ""),
+                data.get("state", "pending"),
+                _j(data.get("plan"), "{}"),
+                data.get("steps_completed", 0),
+                data.get("steps_total", 0),
+                data.get("error"),
+                data.get("verification_result"),
+                data.get("retry_count", 0),
+                _j(data.get("metadata", {}), "{}"),
+                _j(data.get("history", []), "[]"),
+                data.get("created_at", now),
+                data.get("updated_at", now),
+            ),
+        )
+
+
+def get_task(task_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a task by ID."""
+    init_db()
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM tasks WHERE task_id = ?", (task_id,)
+        ).fetchone()
+    return _row_to_task(row) if row else None
+
+
+def list_tasks(limit: int = 50, state: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Lists tasks, optionally filtered by state."""
+    init_db()
+    with get_db() as conn:
+        if state:
+            rows = conn.execute(
+                "SELECT * FROM tasks WHERE state = ? ORDER BY updated_at DESC LIMIT ?",
+                (state, limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM tasks ORDER BY updated_at DESC LIMIT ?", (limit,)
+            ).fetchall()
+    return [_row_to_task(r) for r in rows]
+
+
+def _row_to_task(row) -> Dict[str, Any]:
+    def _pj(v, default):
+        try:
+            return json.loads(v) if v else default
+        except Exception:
+            return default
+
+    return {
+        "task_id": row["task_id"],
+        "goal": row["goal"],
+        "state": row["state"],
+        "plan": _pj(row["plan"], {}),
+        "steps_completed": row["steps_completed"],
+        "steps_total": row["steps_total"],
+        "error": row["error"],
+        "verification_result": row["verification_result"],
+        "retry_count": row["retry_count"],
+        "metadata": _pj(row["metadata"], {}),
+        "history": _pj(row["history"], []),
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Execution Metrics CRUD
+# ═══════════════════════════════════════════════════════════════════════════
+
+def save_execution_metrics(data: Dict[str, Any]) -> None:
+    """Saves execution metrics for a task."""
+    init_db()
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO execution_metrics
+                (task_id, model, provider, input_tokens, output_tokens,
+                 tool_calls, retries, duration_seconds, success,
+                 verification_result, estimated_cost, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                data.get("task_id"),
+                data.get("model", ""),
+                data.get("provider", ""),
+                data.get("input_tokens", 0),
+                data.get("output_tokens", 0),
+                data.get("tool_calls", 0),
+                data.get("retries", 0),
+                data.get("duration_seconds", 0.0),
+                1 if data.get("success") else 0,
+                data.get("verification_result"),
+                data.get("estimated_cost"),
+                time.time(),
+            ),
+        )
+
+
+def get_metrics_summary(limit: int = 20) -> List[Dict[str, Any]]:
+    """Returns recent execution metrics."""
+    init_db()
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM execution_metrics ORDER BY created_at DESC LIMIT ?", (limit,)
+        ).fetchall()
+    return [dict(r) for r in rows]
 
 
 if __name__ == "__main__":

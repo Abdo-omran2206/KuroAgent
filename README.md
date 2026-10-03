@@ -1,144 +1,229 @@
-# 🤖 KURO 2.0 - Autonomous Terminal AI System Assistant
+# 🤖 KURO 2.0 — Autonomous Terminal AI System Assistant
 
-**KURO 2.0** is an autonomous, system-level AI engineer and terminal assistant inspired by Claude Code and Open Interpreter. It features a multi-step **ReAct execution loop**, intelligent **Multi-Key & Multi-Model Pools** with automatic rate-limit failover, persistent **SQLite Brain**, **Neural TTS Voice**, **Multimodal Vision**, **Task Planning Mode**, **Global Windows Hotkey**, and a modern Rich terminal experience.
-
----
-
-## 🌟 Level 2 Core Capabilities
-
-- **🔄 Multi-Step Autonomous ReAct Loop:** Executes complex sequential tasks (up to 10 automated steps: analyze ➔ file operations ➔ shell commands ➔ code executions ➔ verification).
-- **🤖 Full Self-Access & Self-Modification:** KURO has full access to its own codebase (`core/`, `tools/`, `main.py`, `brain/`). When instructed to add features, fix bugs, or alter system behavior, it inspects and updates its own source files.
-- **🔔 Windows Toast Notifications (`/notify`):** Native Windows Toast notifications and optional webhooks for alerting when tasks finish.
-- **🗄️ Database Explorer Tool (`/db`):** Introspect SQLite database structures (`brain/kuro.db`), view tables, describe columns, and run SQL queries.
-- **🌐 Browser Automation (Playwright & Headless):** Automated link clicking, form interaction, web scraping (`/browse`), and page content extraction.
-- **🧠 Persistent Brain Storage (`brain/`):** Integrated SQLite database (`brain/kuro.db`), Markdown personality profile (`brain/personality.md`), task plans, notes (`brain/notes/`), and skills (`brain/skills/`).
-- **🎙️ Ultra-Realistic Neural Voice:** Built-in `edge-tts` voice engine with 8 realistic human speakers (Ava, Andrew, Emma, Brian, Guy, Jenny, Ryan, Sonia) and live typewriter streaming.
-- **📋 Task Planning Mode (`/plan`):** Decomposes high-level goals into multi-step execution plans tracked in SQLite database.
-- **⌨️ Global Windows Hotkey (`Ctrl+Alt+K`):** Win32 background listener that brings KURO to the foreground instantly from any application.
-- **🔑 Multi-Key & Multi-Model Resource Pools:** Supply multiple API keys (`GEMINI_API_KEYS=k1,k2,k3`). Automatically rotates on rate limits or cascades across providers.
-- **🛡️ Auto-Git Checkpoints & `/undo`:** Automatic snapshots before modifying files, allowing instant one-command rollbacks.
+<div align="center">
+  <img src="assets/kuro_icon.png" width="160" alt="KURO Agent Logo" />
+  <h3>Level 2 Autonomous System Engineer & Terminal Assistant</h3>
+  <p><b>Context Engine</b> | <b>Typed Memory</b> | <b>Verification Loop</b> | <b>Permission Gate</b> | <b>Plugin Registry</b> | <b>Encrypted Vault</b> | <b>AST Sandbox Guard</b></p>
+</div>
 
 ---
 
-## 📁 Project Architecture
+## 🌟 Overview
 
-```
-KURO/
-├── main.py                     # Main CLI REPL Entry Point & Interface
-├── requirements.txt            # Project Dependencies
-├── README.md                   # Documentation
-├── .env / .env.example         # Multi-key & multi-provider configuration
-├── .gitignore                  # Git specification
+**KURO 2.0** is an enterprise-grade autonomous AI desktop and CLI agent built in Python. Designed as a long-term scalable assistant, Kuro operates locally on your machine while providing safe self-improvement, project awareness, structured task planning, multi-provider LLM failover, encrypted credential management, AST execution sandboxing, and modular plugin extensibility.
+
+---
+
+## 🚀 Key Architectural Systems
+
+### 1. 🔒 Encrypted Secret Vault (`/vault`)
+- Replaces / augments plaintext `.env` storage with **Windows DPAPI** (`CryptProtectData`/`CryptUnprotectData`) and **AES-256 / PBKDF2** encrypted credential storage (`vault.enc`).
+- Provides zero-dependency native Windows encryption tied to your OS user profile.
+- In-memory credential masking and auto-migration from existing `.env` files via `/vault migrate`.
+- Supports explicit master password locking (`/vault lock`) and unlocking (`/vault unlock`).
+
+### 2. 🛡️ AST Code Safety Sandbox & Execution Guard (`/sandbox`)
+- Pre-execution AST (Abstract Syntax Tree) analyzer that inspects all dynamic Python execution requests before runtime.
+- Proactively blocks malicious or catastrophic operations (e.g. recursive disk formatting, dangerous `_ctypes` memory manipulations, destructive shell patterns).
+- Dedicated isolated workspace directory `%APPDATA%\Kuro\sandbox\` for temporary scripts and artifact generation.
+- **Privacy & PII Sanitizer:** Automatically masks API keys, bearer tokens, passwords, and sensitive strings from logs and outputs.
+
+### 3. 🧠 Context Engine
+- Selectively retrieves relevant working memory, recent episodic exchanges, semantic facts, and procedural skills within a strict token budget.
+- Eliminates context-window overflow by prioritizing essential data over full conversation history.
+
+### 4. 🗄️ Structured Memory System
+- **Episodic Memory:** Chronological interaction log and conversation summaries.
+- **Semantic Memory:** Key-value knowledge graph storing project facts, tech stacks, and user preferences.
+- **Procedural Memory:** Structured skills with workflows, preconditions, versioning, and success rates.
+- **Working Memory:** Real-time state of current goal, active step, and tool observations.
+
+### 5. 🔍 Verification & Reflection Loop
+- Evolves execution from `Think → Act → Observe` into `Think → Plan → Act → Observe → Verify → Reflect`.
+- Targeted verification strategies for file existence, Python syntax compilation (`py_compile`), JSON syntax, shell return codes, web fetch word counts, and SQL execution.
+- Classifies outcomes as `SUCCESS`, `PARTIAL_SUCCESS`, `FAILURE`, or `UNKNOWN`.
+
+### 6. 🛡️ Centralized Permission & Security Layer
+- Enforces strict risk categorization:
+  - **`SAFE`**: Read-only actions (read file, list directory, search web, fetch URL).
+  - **`CONFIRM`**: Impactful operations (write file, edit file, run command, execute python, save skill).
+  - **`DANGEROUS`**: Destructive actions (delete files, modify system config, self-modify, credential access).
+- Safe Mode prompts for user confirmation before executing any `CONFIRM` or `DANGEROUS` action.
+
+### 7. ⚙️ Task State Machine
+- Lifecycle state transitions:
+  `PENDING → PLANNING → EXECUTING → VERIFYING → COMPLETED`
+  *(Failure path: `EXECUTING → FAILED → RECOVERING → RETRY → VERIFYING`)*
+- SQLite-backed state persistence for cross-session task recovery.
+
+### 8. 🔌 Modular Plugin Architecture
+- Standardized `ToolContract` with input/output schemas, risk levels, and versioning.
+- Dynamic plugin discovery from `%APPDATA%\Kuro\plugins\`.
+- Clean separation between core agent runtime and user interfaces.
+
+### 9. 📁 Project Awareness Engine
+- Automatic inspection of root directory to build a project profile: programming languages, frameworks, package managers, entry points, configuration files, build/test scripts, and Git status.
+- Profiles cached in `%APPDATA%\Kuro\projects\` for fast lookup.
+
+### 10. 🎯 Task-Aware Model Router & Metrics
+- Task classification: `FAST_SIMPLE`, `COMPLEX_REASONING`, `CODING`, `VISION`.
+- Routes to optimal models while preserving multi-provider (`Gemini`, `Groq`, `OpenRouter`, `OpenAI`, `Ollama`) and multi-key failover rotation.
+- Tracks execution metrics: token usage, tool calls, retries, duration, and verification results.
+
+### 11. 🌐 Connected Services & Multi-Channel Notifier
+- External integrations (`integrations/`): **GitHub**, **Google Drive**, and **Email (SMTP/IMAP)**.
+- Multi-channel notification center (`/notify`): Windows Toast, Discord Webhooks, Telegram Bot, Slack Webhooks, and Voice Audio Chimes.
+
+---
+
+## 📂 Repository Structure
+
+```text
+Kuro/
+├── main.py                     # CLI REPL & Entry Point (prompt_toolkit + Typer)
+├── prompt.txt                  # Evolution Requirements Specification
+├── README.md                   # Project Documentation
+├── requirements.txt            # Python Dependencies
 │
-├── core/                       # Core AI Assistant Engine
-│   ├── __init__.py            # Package Exporter
-│   ├── config.py              # KeyPools, Fallback Chains, & Paths
-│   ├── agent.py               # Autonomous ReAct Agent Loop (Self-Access & Self-Modification)
-│   ├── llm.py                 # Multi-Provider Failover & Vision Dispatcher
-│   ├── memory.py              # Memory interface & automatic summarizer
-│   ├── memory_db.py           # SQLite Database Brain interface (kuro.db)
-│   └── personality.py         # Personality profile loader & trait sync
+├── core/                       # Kuro Core Agent Engine
+│   ├── agent.py                # KuroAgent ReAct Autonomous Loop
+│   ├── vault.py                # Encrypted Credential Vault (Windows DPAPI / AES-256)
+│   ├── sandbox.py              # AST Execution Guard & Privacy PII Sanitizer
+│   ├── paths.py                # Centralized Path Manager (AppData vs AppDir)
+│   ├── permissions.py          # Centralized Permission Gate (SAFE/CONFIRM/DANGEROUS)
+│   ├── task_state.py           # Task Lifecycle State Machine & Registry
+│   ├── memory_types.py         # Episodic, Semantic, Procedural & Working Memory
+│   ├── context_engine.py       # Context Retrieval Engine & Token Budgeter
+│   ├── verification.py         # Verification Strategy Engine
+│   ├── skill_system.py         # Skill Discovery, Relevance Matching & Creation
+│   ├── plugin_registry.py      # ToolContract & Dynamic Plugin Loader
+│   ├── project_aware.py        # Project Profile Inspector & Cacher
+│   ├── model_router.py         # Task-Aware Model Router & Execution Metrics
+│   ├── self_update.py          # Safe Self-Improvement Staged Pipeline
+│   ├── experiment.py           # Multi-Candidate Experiment System
+│   ├── multi_agent.py          # Specialized Agent & Orchestrator Abstractions
+│   ├── integration_manager.py  # External Integrations Manager
+│   ├── logger.py               # Secret-Redacting Structured Logger
+│   ├── config.py               # KeyPools, Fallback Chains, & Env Settings
+│   ├── llm.py                  # Multi-Provider Failover REST Dispatcher
+│   ├── memory.py               # Memory JSON/SQLite bridge
+│   ├── memory_db.py            # Persistent SQLite Database Storage (kuro.db)
+│   └── personality.py          # Personality Profile Loader
 │
-├── tools/                      # Autonomous Action Tools
-│   ├── __init__.py            # Package Exporter
-│   ├── system.py              # Subprocess command execution & security checks
-│   ├── files.py               # Pathlib file operations, unified diffs, & SQL queries
-│   ├── notifier.py            # Native Windows Toast notifications & webhooks
-│   ├── db_explorer.py         # DB Introspection, table schema viewer, & queries
-│   ├── planner.py             # Task planning engine & multi-step execution
-│   ├── hotkey.py              # Win32 global hotkey listener (Ctrl+Alt+K)
-│   ├── voice.py               # Edge-TTS Neural voice & audio player
-│   ├── vision.py              # Gemini multimodal vision analysis
-│   ├── web.py                 # Web search & URL fetcher
-│   ├── web_browser.py         # Playwright & urllib headless browser engine
-│   ├── git_checkpoint.py      # Git auto-checkpoints & rollback
-│   ├── interpreter.py         # Embedded Python interpreter engine
-│   └── self_improve.py        # Custom skills persistence
+├── tools/                      # Built-in Autonomous Action Tools
+│   ├── files.py                # File read/write/edit with diffs & SQL queries
+│   ├── system.py               # Shell command execution & security checks
+│   ├── planner.py              # Task plan generator & step formatter
+│   ├── web.py                  # Web search & URL content fetcher
+│   ├── web_browser.py          # Headless browser & Playwright automation
+│   ├── git_checkpoint.py       # Git auto-checkpoints & one-command rollback
+│   ├── voice.py                # Edge-TTS Neural Voice & microphone input
+│   ├── vision.py               # Base64 multimodal image analysis
+│   ├── interpreter.py          # Embedded Python code execution (AST-guarded)
+│   ├── notifier.py             # Multi-channel notification engine
+│   ├── hotkey.py               # Win32 global hotkey listener (Ctrl+Alt+K)
+│   ├── db_explorer.py          # SQLite database schema explorer
+│   └── self_improve.py         # Custom routines persistence
 │
-├── brain/                      # Persistent Brain Storage
-│   ├── kuro.db                # SQLite Brain Database
-│   ├── personality.md         # Persistent Personality Profile
-│   ├── memory.json            # Memory cache
-│   ├── kuro_prompt.txt        # Base system prompt template
-│   ├── notes/                 # User & KURO Markdown Notes
-│   └── skills/                # Self-learned routines & skills
+├── integrations/               # External Service Integrations
+│   ├── base.py                 # Abstract Base Integration Contract
+│   ├── github_integration.py   # GitHub API Integration (Repos, Issues, PRs)
+│   ├── google_drive_integration.py # Google Drive Integration
+│   └── email_integration.py    # Email SMTP/IMAP Integration
 │
-├── build/                      # Build & Packaging Tools
-│   ├── build_exe.py           # PyInstaller automated executable builder
-│   ├── setup_installer.iss    # Inno Setup Windows installer script
-│   └── KURO.spec              # PyInstaller specification
+├── build/                      # Production Build & EXE Architecture
+│   ├── build_exe.py            # PyInstaller PyInstaller --onedir Build Script
+│   ├── setup_installer.iss     # Inno Setup Installer Script
+│   └── KURO.spec               # PyInstaller Build Specification
 │
-├── tests/                      # Verification & Test Suite
-│   ├── test_all.py            # Master regression test suite
-│   └── test_hotkey.py         # Hotkey unit test
+├── tests/                      # Verification & Test Suites
+│   ├── test_all.py             # Master core regression test suite
+│   ├── test_evolution.py       # Architecture evolution module test suite
+│   └── test_full_system.py     # End-to-end full system & security test suite
 │
 └── assets/                     # Media & Graphics
-    └── kuro_icon.png          # App Icon
+    ├── kuro_icon.png           # Application Logo (PNG)
+    └── kuro_icon.ico           # Executable Icon (ICO)
 ```
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Categorized Command Reference
 
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Configure Keys
-Add your keys using the CLI or `.env`:
-```bash
-/key YOUR_GEMINI_KEY
-/key groq YOUR_GROQ_KEY
-```
-
-### 3. Launch KURO 2.0
-```bash
-python main.py
-```
+| Command | Purpose | Example / Usage |
+| :--- | :--- | :--- |
+| **⚙️ Core & Configuration** | | |
+| `/status` | Active provider, model, & safe mode status | Type `/status` |
+| `/safe` | Toggle Safe Mode & permission prompts | `/safe off` \| `/safe allow execute_python` |
+| `/pool` | View API key pool & cooldown status | Type `/pool` |
+| `/models` | View model fallback priority chain | Type `/models` |
+| `/key` | Add API key to key pool | `/key <KEY>` or `/key groq <KEY>` |
+| `/undo` | Rollback file changes via Git | Type `/undo` |
+| `/hotkey` | Global Win32 Hotkey Status (Ctrl+Alt+K) | Type `/hotkey` |
+| `!<cmd>` | Direct shell execution bypass | `!dir` or `!git status` |
+| **🔒 Security & Privacy** | | |
+| `/vault` | Encrypted credential vault manager | `/vault list` \| `/vault set <KEY> <VAL>` |
+| `/sandbox` | AST code safety analyzer & execution guard | `/sandbox status` \| `/sandbox toggle` |
+| **📁 Workspace & Project** | | |
+| `/dir` | List directory contents (with path Tab autocompletion) | `/dir core/` |
+| `/project` | Show current project profile & tech stack | Type `/project` |
+| `/notes` | Write structured Markdown note to brain/notes/ | `/notes test.md content` |
+| `/db` | Explore SQLite database schema, tables, and rows | `/db brain/kuro.db` |
+| `/sql` | Execute raw SQL query on database | `/sql SELECT * FROM tasks;` |
+| **🧠 Memory & Tasks** | | |
+| `/memory` | Persistent conversation memory & brain summary | Type `/memory` |
+| `/clear` | Reset active conversation memory | Type `/clear` |
+| `/plan` | Task planning mode (goal decomposition) | `/plan build a trading bot` |
+| `/tasks` | List active/historical task states | Type `/tasks` |
+| `/metrics` | View execution analytics (tokens, tool calls, costs) | Type `/metrics` |
+| **🛠️ Tools & Perception** | | |
+| `/search` | Live web search (DuckDuckGo + Wikipedia) | `/search OpenAI news 2026` |
+| `/see` | Multimodal Vision & Image Analysis | `/see assets/kuro_icon.png` |
+| `/browse` | Headless web browser automation & scraping | `/browse https://news.ycombinator.com` |
+| `/voice` | Neural TTS output (toggle/list/switch speaker) | `/voice list` or `/voice andrew` |
+| `/listen` | Microphone Speech-to-Text input mode | Type `/listen` |
+| `/notify` | Smart notifications (Toast, Discord, Telegram, Slack) | `/notify --channel telegram --target @channel "Alert"` |
+| **🌐 Integrations & Skills** | | |
+| `/integrations`| Manage connected services (GitHub, Drive, Email, Telegram, Discord) | Type `/integrations` |
+| `/connect` | Connect service token & persist to Vault/.env | `/connect telegram <BOT_TOKEN> [CHAT_ID_OR_CHANNEL]` |
+| `/disconnect` | Disconnect external service integration | `/disconnect telegram` |
+| `/learn` | Save custom procedural routine | `/learn test_flow Run tests` |
+| `/skills` | List all self-learned skills | Type `/skills` |
+| **🚪 Session** | | |
+| `/help` | Show categorized command reference | Type `/help` |
+| `exit / quit` | Terminate active KURO session | `exit` or `quit` |
 
 ---
 
-## 🛠️ Building Standalone Executable & Windows Installer (`build/`)
+### 📱 Telegram Channel Messaging Guide
 
-### 📦 One-Click Batch Build Scripts
-- **`build_all.bat`**: Builds both the PyInstaller executable AND the Inno Setup Windows installer in one step.
-- **`build.bat`**: Compiles standalone `dist/KURO.exe` executable with embedded `.ico` icon.
-- **`build_installer.bat`**: Compiles `dist/KURO_v2_Setup.exe` Windows setup wizard using Inno Setup (`ISCC.exe`).
+Why Telegram channel messages sometimes fail and how Kuro 2.0 solves it:
 
-```cmd
-:: Full build (Exe + Installer)
-build_all.bat
-
-:: Build standalone EXE only
-build.bat
-
-:: Build setup installer wizard only
-build_installer.bat
-```
+1. **Bot Must Be An Administrator**:
+   To send messages to a public or private Telegram Channel, your bot **must be added as an Administrator** in Channel Settings with the **"Post Messages"** permission enabled.
+2. **Chat ID Formatting**:
+   - **Public Channels**: Use `@your_channel_username` or `-100xxxxxxxxxx`.
+   - **Private Channels / Supergroups**: Use the numeric ID `-100xxxxxxxxxx` (obtainable by forwarding a channel post to `@userinfobot` or `@JsonDumpBot`).
+   - **Direct User Messages**: Send `/start` to your bot in Telegram first, then use your numeric user ID.
+3. **HTML Parse Mode**:
+   Kuro 2.0 uses HTML parsing with automatic entity escaping and plain text fallbacks, eliminating Telegram entity parsing errors on underscores and backticks.
+4. **Diagnostic Commands**:
+   - Run `/notify diagnose telegram [@channel_or_id]` to automatically check channel connectivity, permissions, and bot status.
+   - Run `/notify test telegram` to send a verified test card.
 
 ---
 
-## 💻 Slash Commands Reference
+## 🧪 Testing & Verification
 
-| Command | Action | Example |
-|---------|--------|---------|
-| `/notify <title> \| <msg>` | Send native Windows Toast notification | `/notify Task Completed \| Finished build` |
-| `/db [db_path]` | Introspect & view SQLite database tables | `/db brain/kuro.db` |
-| `/plan <goal>` | Generate multi-step task execution plan | `/plan Build automated crypto price monitor` |
-| `/sql <query>` | Execute SQL query/script on `brain/kuro.db` | `/sql SELECT * FROM conversations LIMIT 5;` |
-| `/notes <name.md> <content>` | Write structured Markdown note to `brain/notes/` | `/notes market_notes.md BTC price 95k` |
-| `/hotkey` | View status of global Windows hotkey (`Ctrl+Alt+K`) | `/hotkey` |
-| `/voice` | Toggle TTS output / list voices (`/voice list`) / set voice (`/voice andrew`) | `/voice list` |
-| `/listen` | Microphone speech-to-text input mode | `/listen` |
-| `/see <path>` | Multimodal image vision analysis | `/see C:\chart.png explain trends` |
-| `/browse <url>` | Headless web browser scraping | `/browse https://news.ycombinator.com` |
-| `/pool` | View live KeyPool status, 429 rate limit cooldowns | `/pool` |
-| `/models` | View fallback model chain for current provider | `/models` |
-| `/undo` | Rollback last automated file modifications via Git | `/undo` |
-| `/search <query>` | Perform a live web search | `/search OpenAI news 2026` |
-| `/status` | View active configuration and safety modes | `/status` |
-| `/memory` | Inspect conversation history & brain summary | `/memory` |
-| `/clear` | Clear saved conversation memory | `/clear` |
-| `!command` | Run direct shell command (e.g. `!git status`) | `!git status` |
-| `exit` / `quit` | Exit KURO session | `exit` |
+Run the comprehensive test suites to verify system integrity:
+```bash
+# Core regression tests (12/12)
+python tests/test_all.py
+
+# Architecture evolution tests (11/11)
+python tests/test_evolution.py
+
+# End-to-end full system, Security Vault & Integrations tests (17/17)
+python -m unittest tests/test_full_system.py
+```
+*Total: 40 / 40 test cases passing.*

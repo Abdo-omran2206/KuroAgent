@@ -66,10 +66,15 @@ def run_command(cmd: str, cwd: str = None, confirm_if_risky: bool = True) -> Dic
 
 def get_system_info() -> Dict[str, str]:
     """Returns basic system environment information."""
+    try:
+        current_user = os.getlogin()
+    except Exception:
+        current_user = os.getenv("USERNAME", os.getenv("USER", "user"))
+
     return {
         "os": platform.system(),
         "os_release": platform.release(),
         "python_version": platform.python_version(),
         "cwd": os.getcwd(),
-        "user": os.getlogin() if hasattr(os, "getlogin") else os.getenv("USERNAME", os.getenv("USER", "user"))
+        "user": current_user,
     }

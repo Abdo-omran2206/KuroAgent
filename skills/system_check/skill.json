@@ -1,0 +1,17 @@
+{
+  "name": "system_check",
+  "description": "Run diagnostic checks",
+  "purpose": "Run diagnostic checks",
+  "required_tools": [],
+  "preconditions": [],
+  "workflow": [
+    "check os",
+    "check python"
+  ],
+  "parameters": {},
+  "examples": [],
+  "known_failures": [],
+  "version": "1.0.0",
+  "success_count": 0,
+  "failure_count": 0
+}

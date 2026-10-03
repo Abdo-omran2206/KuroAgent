@@ -114,6 +114,7 @@ def list_directory(path_str: str = ".") -> Dict[str, Any]:
 def execute_sql_query(db_path_str: str, query: str, params: tuple = ()) -> Dict[str, Any]:
     """Executes a SQL query or script against a SQLite database file (.db / .sql)."""
     import sqlite3
+    conn = None
     try:
         p = resolve_path(db_path_str)
         if not p.exists():
@@ -124,24 +125,27 @@ def execute_sql_query(db_path_str: str, query: str, params: tuple = ()) -> Dict[
         cursor = conn.cursor()
 
         # If query contains multiple SQL statements (script)
-        if ";" in query and ("CREATE" in query.upper() or "INSERT" in query.upper() or "UPDATE" in query.upper()):
+        if ";" in query and any(k in query.upper() for k in ("CREATE", "INSERT", "UPDATE", "DROP", "ALTER")):
             cursor.executescript(query)
             conn.commit()
-            conn.close()
             return {"success": True, "rows": [], "message": "SQL script executed successfully."}
 
         cursor.execute(query, params)
         if query.strip().upper().startswith(("SELECT", "PRAGMA", "EXPLAIN")):
             rows = [dict(row) for row in cursor.fetchall()]
-            conn.close()
             return {"success": True, "rows": rows, "count": len(rows)}
         else:
             conn.commit()
             affected = cursor.rowcount
-            conn.close()
             return {"success": True, "affected_rows": affected, "message": f"{affected} row(s) updated."}
     except Exception as e:
         return {"success": False, "error": f"SQL Execution Error: {str(e)}"}
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def write_md_note(path_str: str, title: str, body: str, metadata: dict = None) -> Dict[str, Any]:

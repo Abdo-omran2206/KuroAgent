@@ -86,7 +86,7 @@ KURO_TITLE = "[bold cyan]K[/][bold white]U[/][bold cyan]R[/][bold white]O[/]"
 BANNER_LINES = [
     "",
     f"   {KURO_TITLE}  [dim]v2.0[/dim]  [bold cyan]Autonomous Terminal Intelligence[/]",
-    "   [dim]ReAct Engine  |  Multi-Key Pools  |  Web Search  |  Git Checkpoints[/]",
+    "   [dim]ReAct 2.0  |  Context Engine  |  Encrypted Vault  |  Sandbox Guard  |  Integrations[/]",
     "",
 ]
 
@@ -95,32 +95,43 @@ COMMAND_LIST = [
     "/key", "/undo", "/clear", "/memory",
     "/search", "/see", "/browse", "/voice", "/listen",
     "/learn", "/skills", "/plan", "/sql", "/notes", "/hotkey",
-    "/notify", "/db",
+    "/notify", "/db", "/dir", "/project", "/integrations", "/connect", "/disconnect", "/tasks", "/metrics",
+    "/vault", "/sandbox", "/safe",
     "exit", "quit"
 ]
 
 SLASH_DESCRIPTIONS = {
-    "/help":    "Show command reference & capabilities",
-    "/status":  "Active provider, model, & system status",
-    "/pool":    "API key pool & cooldown status",
-    "/models":  "Model fallback priority chain",
-    "/key":     "Add API key: /key <KEY> or /key <provider> <KEY>",
-    "/undo":    "Rollback last automated file changes",
-    "/clear":   "Reset active conversation memory",
-    "/memory":  "View stored conversation history & brain summary",
-    "/search":  "Live web search: /search <query>",
-    "/see":     "Vision analysis: /see <image_path> [prompt]",
-    "/browse":  "Headless web automation: /browse <url>",
-    "/voice":   "Toggle TTS | /voice list | /voice <name>",
-    "/listen":  "Microphone Speech-to-Text input mode",
-    "/learn":   "Save custom routine: /learn <skill_name> <steps>",
-    "/skills":  "List all KURO self-learned skills",
-    "/plan":    "Task planning mode: /plan <goal_description>",
-    "/sql":     "Execute SQL query: /sql <query_or_script>",
-    "/notes":   "Write MD note: /notes <filename.md> <content>",
-    "/hotkey":  "Global hotkey status (Ctrl+Alt+K / Ctrl+Shift+K)",
-    "/notify":  "Send Windows Toast: /notify <title> | <message>",
-    "/db":      "Database explorer: /db [db_path]",
+    "/help":         "Show command reference & capabilities",
+    "/status":       "Active provider, model, & safe mode status",
+    "/safe":         "Toggle Safe Mode & permission prompts: /safe <on|off|toggle|status|allow <tool>>",
+    "/pool":         "API key pool & cooldown status",
+    "/models":       "Model fallback priority chain",
+    "/key":          "Add API key: /key <KEY> or /key <provider> <KEY>",
+    "/undo":         "Rollback last automated file changes",
+    "/clear":        "Reset active conversation memory",
+    "/memory":       "View stored conversation history & brain summary",
+    "/search":       "Live web search: /search <query>",
+    "/see":          "Vision analysis: /see <image_path> [prompt]",
+    "/browse":       "Headless web automation: /browse <url>",
+    "/voice":        "Toggle TTS | /voice list | /voice <name>",
+    "/listen":       "Microphone Speech-to-Text input mode",
+    "/learn":        "Save custom routine: /learn <skill_name> <steps>",
+    "/skills":       "List all KURO self-learned skills",
+    "/plan":         "Task planning mode: /plan <goal_description>",
+    "/sql":          "Execute SQL query: /sql <query_or_script>",
+    "/notes":        "Write MD note: /notes <filename.md> <content>",
+    "/hotkey":       "Global hotkey status (Ctrl+Alt+K / Ctrl+Shift+K)",
+    "/notify":       "Send Windows Toast: /notify <title> | <message>",
+    "/db":           "Database explorer: /db [db_path]",
+    "/dir":          "List directory contents: /dir [path]",
+    "/project":      "Show current project profile & architecture hints",
+    "/integrations": "Manage connected services (GitHub, Google Drive)",
+    "/connect":      "Connect service token: /connect <github|drive|email> <TOKEN>",
+    "/disconnect":   "Disconnect service: /disconnect <github|drive|email>",
+    "/tasks":        "List active/historical tasks & state lifecycle",
+    "/metrics":      "View execution analytics (tokens, tool calls, costs)",
+    "/vault":        "Encrypted credential vault: /vault <set|get|list|delete|lock|unlock|migrate>",
+    "/sandbox":      "Execution guard & AST sandbox: /sandbox <status|on|off|toggle|clean|check>",
 }
 
 # ─────────────────────────────────────────────────────────
@@ -389,57 +400,93 @@ def display_pool_status():
 
 
 def display_help():
-    """Modern styled help panel with command usage and self-aware capabilities."""
-    table = Table(
-        title="KURO 2.0  Command Reference & Self-Aware Capabilities",
-        border_style="cyan",
-        box=box.ROUNDED,
-        show_lines=True,
-        header_style="bold cyan",
-    )
-    table.add_column("Command", style="bold cyan", min_width=16)
-    table.add_column("Capability & Action", style="white", min_width=30)
-    table.add_column("How to Use / Example", style="yellow")
-
-    rows = [
-        ("/help",                  "Display system reference & tool capabilities",  "Type [cyan]/help[/cyan]"),
-        ("/status",                "Show active LLM provider, model, & safe mode", "Type [cyan]/status[/cyan]"),
-        ("/pool",                  "View API key pool & rate limit cooldowns",    "Type [cyan]/pool[/cyan]"),
-        ("/models",                "View model fallback chain for active provider","Type [cyan]/models[/cyan]"),
-        ("/key",                   "Add API key to provider pool",                 "[cyan]/key <KEY>[/cyan] or [cyan]/key groq <KEY>[/cyan]"),
-        ("/undo",                  "Rollback automated file changes via Git",       "Type [cyan]/undo[/cyan]"),
-        ("/search",                "Live web search (DuckDuckGo + Wikipedia)",      "[cyan]/search OpenAI news 2026[/cyan]"),
-        ("/see",                   "Multimodal Vision & Image Analysis",           "[cyan]/see C:\\chart.png explain trends[/cyan]"),
-        ("/browse",                 "Headless web browser scraping",                "[cyan]/browse https://news.ycombinator.com[/cyan]"),
-        ("/voice",                  "Neural TTS Voice Output  (toggle / list / switch speaker)",  "[cyan]/voice[/]  |  [cyan]/voice list[/]  |  [cyan]/voice andrew[/]"),
-        ("/plan",                   "Task Planning Mode (multi-step decomposition)", "[cyan]/plan build a trading bot[/cyan]"),
-        ("/sql",                    "SQLite Database Query / Script execution",      "[cyan]/sql SELECT * FROM conversations LIMIT 5;[/cyan]"),
-        ("/notes",                  "Write structured Markdown note to brain/notes/","[cyan]/notes market_notes.md BTC looks bullish[/cyan]"),
-        ("/hotkey",                 "Global Win32 Hotkey Status (Ctrl+Alt+K)",        "Type [cyan]/hotkey[/cyan]"),
-        ("/learn",                  "Save custom routine (Self-Improvement)",      "[cyan]/learn test_flow Run pytest and lint[/cyan]"),
-        ("/skills",                 "List all self-learned skills & routines",      "Type [cyan]/skills[/cyan]"),
-        ("/memory",                 "Inspect persistent conversation memory store",  "Type [cyan]/memory[/cyan]"),
-        ("/clear",                  "Reset conversation context memory",           "Type [cyan]/clear[/cyan]"),
-        ("!<cmd>",                  "Direct shell execution (bypass LLM)",           "[cyan]!git status[/cyan] or [cyan]!dir[/cyan]"),
-        ("exit / quit",             "Terminate KURO session",                       "Type [cyan]exit[/cyan] or [cyan]quit[/cyan]"),
+    """Sectioned, modern styled help panel with command categories and usage examples."""
+    sections = [
+        ("⚙️  Core & Configuration", [
+            ("/status",      "Show active LLM provider, model, & safe mode status", "Type [cyan]/status[/cyan]"),
+            ("/safe",        "Toggle Safe Mode & permission prompts (on/off/allow)", "[cyan]/safe off[/cyan] | [cyan]/safe allow execute_python[/cyan]"),
+            ("/pool",        "View API key pool rotation & rate limit cooldowns",    "Type [cyan]/pool[/cyan]"),
+            ("/models",      "View model fallback chain for active provider",       "Type [cyan]/models[/cyan]"),
+            ("/key",         "Add API key to provider pool & persist to .env",       "[cyan]/key <KEY>[/cyan] or [cyan]/key groq <KEY>[/cyan]"),
+            ("/undo",        "Rollback last automated file changes via Git",        "Type [cyan]/undo[/cyan]"),
+            ("/hotkey",      "Global Win32 Hotkey Status (Ctrl+Alt+K)",             "Type [cyan]/hotkey[/cyan]"),
+            ("!<cmd>",       "Direct shell command bypass (executes locally)",      "[cyan]!git status[/cyan] or [cyan]!dir[/cyan]"),
+        ]),
+        ("📁  Workspace & Project Awareness", [
+            ("/dir",         "List directory contents (with path Tab autocompletion)","[cyan]/dir [path][/cyan]"),
+            ("/project",     "Inspect project profile, tech stack, entry points",   "Type [cyan]/project[/cyan]"),
+            ("/notes",       "Write structured Markdown note to brain/notes/",      "[cyan]/notes notes.md content[/cyan]"),
+            ("/db",          "Explore SQLite database schema, tables, and rows",    "[cyan]/db [db_path][/cyan]"),
+            ("/sql",         "Execute raw SQL query or script on SQLite database",  "[cyan]/sql SELECT * FROM tasks;[/cyan]"),
+        ]),
+        ("🧠  Memory, Tasks & Metrics", [
+            ("/memory",      "Inspect persistent conversation memory and summary",  "Type [cyan]/memory[/cyan]"),
+            ("/clear",       "Reset active conversation working memory",            "Type [cyan]/clear[/cyan]"),
+            ("/plan",        "Task Planning Mode (decompose goal into steps)",      "[cyan]/plan build a trading bot[/cyan]"),
+            ("/tasks",       "List active and historical task state lifecycles",    "Type [cyan]/tasks[/cyan]"),
+            ("/metrics",     "View execution analytics (tokens, tool calls, costs)", "Type [cyan]/metrics[/cyan]"),
+        ]),
+        ("🛠️  Autonomous Tools & Perception", [
+            ("/search",      "Live web search (DuckDuckGo + Wikipedia)",            "[cyan]/search OpenAI news 2026[/cyan]"),
+            ("/see",         "Multimodal Vision & Image Analysis",                  "[cyan]/see C:\\image.png explain[/cyan]"),
+            ("/browse",      "Headless web browser automation & scraping",          "[cyan]/browse https://news.ycombinator.com[/cyan]"),
+            ("/voice",       "Neural TTS Voice output (toggle / list / switch)",    "[cyan]/voice[/] | [cyan]/voice list[/] | [cyan]/voice andrew[/]"),
+            ("/listen",      "Microphone Speech-to-Text voice input mode",          "Type [cyan]/listen[/cyan]"),
+            ("/notify",      "Omni-channel smart notifier (Toast, Telegram, Discord)", "[cyan]/notify --channel telegram Hello[/cyan] | [cyan]/notify test[/cyan]"),
+        ]),
+        ("🌐  Integrations & Skills", [
+            ("/integrations","List connected services (Telegram, Discord, GitHub, Drive, Email)", "Type [cyan]/integrations[/cyan]"),
+            ("/connect",     "Connect external service & persist to Encrypted Vault", "[cyan]/connect telegram <TOKEN> [CHAT_ID][/cyan]"),
+            ("/disconnect",  "Disconnect an external service integration",          "[cyan]/disconnect <service>[/cyan]"),
+            ("/learn",       "Save custom procedural routine (Self-Improvement)",   "[cyan]/learn test_flow Run tests[/cyan]"),
+            ("/skills",      "List all self-learned skills and workflows",          "Type [cyan]/skills[/cyan]"),
+        ]),
+        ("🔒  Security & Privacy", [
+            ("/vault",       "Encrypted credential vault manager (DPAPI / AES-256)", "[cyan]/vault list[/cyan] | [cyan]/vault set <K> <V>[/cyan]"),
+            ("/sandbox",     "AST Code Safety Analyzer & Execution Guardrails",      "[cyan]/sandbox status[/cyan] | [cyan]/sandbox toggle[/cyan]"),
+        ]),
+        ("🚪  Session Management", [
+            ("/help",        "Display this categorized command reference",          "Type [cyan]/help[/cyan]"),
+            ("exit / quit",  "Terminate active KURO session",                       "Type [cyan]exit[/cyan] or [cyan]quit[/cyan]"),
+        ]),
     ]
-    for cmd, desc, usage in rows:
-        table.add_row(cmd, desc, usage)
 
     console.print()
-    console.print(table)
+    console.print(Rule("[bold cyan]KURO 2.0  Categorized Command Reference[/bold cyan]", style="cyan"))
+    console.print()
+
+    for sec_title, cmd_rows in sections:
+        table = Table(
+            title=sec_title,
+            title_style="bold magenta",
+            border_style="cyan",
+            box=box.ROUNDED,
+            show_lines=False,
+            header_style="bold cyan",
+            expand=True,
+        )
+        table.add_column("Command", style="bold cyan", width=18)
+        table.add_column("Capability & Action", style="white", ratio=3)
+        table.add_column("How to Use / Example", style="yellow", ratio=3)
+
+        for cmd, desc, usage in cmd_rows:
+            table.add_row(cmd, desc, usage)
+
+        console.print(table)
+        console.print()
+
     console.print(
         Panel(
-            "[dim]Tips:\n"
-            "• Press [bold]Tab[/bold] to autocomplete commands and file paths.\n"
-            "• Press [bold]Up/Down arrows[/bold] to navigate command history.\n"
-            "• Press [bold]Ctrl+L[/bold] to clear terminal screen without losing memory.\n"
-            "• KURO is self-aware: ask KURO [bold]'What can you do?'[/bold] to inspect live capabilities.[/dim]",
+            "[dim]💡 Shortcuts & Tips:\n"
+            "• [bold]Tab Completion:[/bold] Press [bold]Tab[/bold] to autocomplete slash commands and directory paths.\n"
+            "• [bold]Command History:[/bold] Press [bold]Up / Down arrows[/bold] to navigate previous commands.\n"
+            "• [bold]Clear Terminal Screen:[/bold] Press [bold]Ctrl+L[/bold] to clear the view without losing conversation memory.\n"
+            "• [bold]Self-Awareness:[/bold] KURO inspects its own tools dynamically. Ask [bold]'What tools do you have?'[/bold] anytime.[/dim]",
+            title="Interactive CLI Tips",
             border_style="bright_black",
             padding=(0, 2),
         )
     )
-    console.print()
     console.print()
 
 
@@ -516,9 +563,9 @@ def main(
     start_global_hotkey_listener()
     _print_header()
 
-    history_file = config.BASE_DIR / ".kuro_history"
+    from core.paths import HISTORY_FILE
     session = PromptSession(
-        history=FileHistory(str(history_file)),
+        history=FileHistory(str(HISTORY_FILE)),
         auto_suggest=AutoSuggestFromHistory(),
         completer=KuroCompleter(),
         style=PT_STYLE,
@@ -814,18 +861,155 @@ def main(
 
                 elif cmd == "/notify":
                     if len(parts) < 2:
-                        console.print("[yellow]  Usage: /notify <title> | <message>[/]")
+                        console.print(Panel(
+                            "[bold cyan]KURO Smart Multi-Channel Notification Center[/]\n\n"
+                            "• [bold]Basic:[/bold]        [cyan]/notify <message>[/cyan]\n"
+                            "• [bold]Titled:[/bold]       [cyan]/notify <title> | <message>[/cyan]\n"
+                            "• [bold]To Telegram:[/bold]  [cyan]/notify --channel telegram [--target @channel_name] <message>[/cyan]\n"
+                            "• [bold]With Image:[/bold]   [cyan]/notify --image C:\\image.png --channel telegram <caption/message>[/cyan]\n"
+                            "• [bold]Urgency:[/bold]      [cyan]/notify --priority <info|success|warning|critical|alert> <message>[/cyan]\n"
+                            "• [bold]Audio / Voice:[/bold][cyan]/notify --sound <default|im|mail|alarm|silent> --speak <message>[/cyan]\n\n"
+                            "[bold yellow]Channel Configurations & Diagnostics:[/bold yellow]\n"
+                            "  - [cyan]/notify config telegram <BOT_TOKEN> <CHAT_ID_OR_CHANNEL>[/cyan]\n"
+                            "  - [cyan]/notify config discord <WEBHOOK_URL>[/cyan]\n"
+                            "  - [cyan]/notify config slack <WEBHOOK_URL>[/cyan]\n"
+                            "  - [cyan]/notify test [telegram|discord|slack|toast|all][/cyan]\n"
+                            "  - [cyan]/notify diagnose telegram [@channel_or_chat_id][/cyan]",
+                            title="🔔 Notification Engine & Telegram Channel Support",
+                            border_style="cyan"
+                        ))
                     else:
-                        full_txt = " ".join(parts[1:])
-                        if "|" in full_txt:
-                            ntitle, nmsg = [p.strip() for p in full_txt.split("|", 1)]
+                        from tools.notifier import (
+                            send_smart_notification,
+                            load_notification_config,
+                            save_notification_config,
+                            diagnose_channel,
+                            NotificationUrgency
+                        )
+
+                        subcmd = parts[1].lower()
+
+                        if subcmd == "test":
+                            target_ch = parts[2].lower() if len(parts) > 2 else "all"
+                            console.print(f"[bold cyan]  Running diagnostic test on channel:[/] [yellow]{target_ch.upper()}[/]")
+                            res = send_smart_notification(
+                                title="System Test Alert",
+                                message="KURO 2.0 notification engine is operational and verified!",
+                                urgency=NotificationUrgency.SUCCESS,
+                                channels=[target_ch],
+                                speak=True if target_ch in ("toast", "all") else False
+                            )
+                            table = Table(title="Notification Dispatch Report", border_style="cyan", box=box.ROUNDED)
+                            table.add_column("Channel", style="bold cyan")
+                            table.add_column("Status", justify="center")
+                            table.add_column("Details / Diagnosis", style="yellow")
+
+                            for ch, ch_res in res.get("dispatched", {}).items():
+                                ok = ch_res.get("success", False)
+                                status_str = "[bold green]✓ SUCCESS[/]" if ok else "[bold red]✗ FAILED[/]"
+                                detail = str(ch_res.get("error") or ch_res.get("message") or "Delivered successfully")
+                                table.add_row(ch.upper(), status_str, detail)
+
+                            console.print(table)
+
+                        elif subcmd == "diagnose":
+                            target_ch = parts[2].lower() if len(parts) > 2 else "telegram"
+                            target_id = parts[3] if len(parts) > 3 else None
+                            console.print(f"[bold cyan]  Diagnosing channel:[/] [yellow]{target_ch.upper()}[/]")
+                            diag = diagnose_channel(target_ch, target=target_id)
+                            console.print(Panel(
+                                json.dumps(diag, indent=2, ensure_ascii=False),
+                                title=f"Channel Diagnostic: {target_ch.upper()}",
+                                border_style="cyan"
+                            ))
+
+                        elif subcmd == "config":
+                            if len(parts) < 4:
+                                console.print("[yellow]  Usage: /notify config <discord|telegram|slack> <TOKEN_OR_URL> [CHAT_ID_OR_CHANNEL][/]")
+                            else:
+                                target_chan = parts[2].lower()
+                                cfg = load_notification_config()
+                                if target_chan in ("discord", "disc"):
+                                    cfg["discord_webhook"] = parts[3]
+                                    save_notification_config(cfg)
+                                    console.print("[bold green]  [OK] Discord webhook configured & stored in Encrypted Vault![/]")
+                                elif target_chan in ("telegram", "tg"):
+                                    cfg["telegram_token"] = parts[3]
+                                    if len(parts) > 4:
+                                        cfg["telegram_chat_id"] = parts[4]
+                                    save_notification_config(cfg)
+                                    console.print(f"[bold green]  [OK] Telegram configured! (Chat/Channel: {cfg.get('telegram_chat_id', 'Default')})[/]")
+                                elif target_chan == "slack":
+                                    cfg["slack_webhook"] = parts[3]
+                                    save_notification_config(cfg)
+                                    console.print("[bold green]  [OK] Slack webhook configured & stored in Encrypted Vault![/]")
+                                else:
+                                    console.print(f"[yellow]  Unknown channel '{target_chan}'.[/]")
+
                         else:
-                            ntitle, nmsg = "KURO System Assistant", full_txt
-                        res = send_toast_notification(ntitle, nmsg)
-                        if res.get("success"):
-                            console.print(f"[bold green]  [OK] Toast notification sent via {res.get('method')}.[/]")
-                        else:
-                            console.print(f"[bold red]  [FAIL] {res.get('error')}[/]")
+                            # Parse flags: --priority, --sound, --speak, --channel, --target, --image
+                            raw_args = parts[1:]
+                            urgency = NotificationUrgency.INFO
+                            sound_preset = "default"
+                            speak_alert = False
+                            chan_override = None
+                            target_override = None
+                            image_path = None
+
+                            clean_parts = []
+                            i = 0
+                            while i < len(raw_args):
+                                arg = raw_args[i]
+                                if arg in ("--priority", "-p") and i + 1 < len(raw_args):
+                                    p_val = raw_args[i + 1].lower()
+                                    try:
+                                        urgency = NotificationUrgency(p_val)
+                                    except Exception:
+                                        pass
+                                    i += 2
+                                elif arg in ("--sound", "-s") and i + 1 < len(raw_args):
+                                    sound_preset = raw_args[i + 1].lower()
+                                    i += 2
+                                elif arg in ("--speak", "-v"):
+                                    speak_alert = True
+                                    i += 1
+                                elif arg in ("--channel", "-c") and i + 1 < len(raw_args):
+                                    chan_override = [raw_args[i + 1].lower()]
+                                    i += 2
+                                elif arg in ("--target", "-t") and i + 1 < len(raw_args):
+                                    target_override = raw_args[i + 1]
+                                    i += 2
+                                elif arg in ("--image", "-i") and i + 1 < len(raw_args):
+                                    image_path = raw_args[i + 1]
+                                    i += 2
+                                else:
+                                    clean_parts.append(arg)
+                                    i += 1
+
+                            full_txt = " ".join(clean_parts)
+                            if "|" in full_txt:
+                                ntitle, nmsg = [p.strip() for p in full_txt.split("|", 1)]
+                            else:
+                                ntitle, nmsg = "KURO System Assistant", full_txt
+
+                            res = send_smart_notification(
+                                title=ntitle,
+                                message=nmsg,
+                                urgency=urgency,
+                                channels=chan_override,
+                                speak=speak_alert,
+                                sound=sound_preset,
+                                target_override=target_override,
+                                image_path=image_path,
+                            )
+                            if res.get("success"):
+                                console.print(f"[bold green]  [OK] Notification sent ({urgency.value.upper()})! Dispatched to: {list(res.get('dispatched', {}).keys())}[/]")
+                            else:
+                                err_details = []
+                                for k_ch, v_ch in res.get("dispatched", {}).items():
+                                    if not v_ch.get("success"):
+                                        err_details.append(f"{k_ch.upper()}: {v_ch.get('error', 'Failed')}")
+                                console.print(f"[bold red]  [FAIL] Notification error:[/] {'; '.join(err_details) if err_details else 'Failed to deliver'}")
 
                 elif cmd == "/db":
                     target_db = parts[1] if len(parts) > 1 else "brain/kuro.db"
@@ -837,8 +1021,333 @@ def main(
                         for t in res.get("tables", []):
                             table.add_row(t["table"], str(t["row_count"]))
                         console.print(table)
+                elif cmd == "/dir":
+                    target_path = parts[1] if len(parts) > 1 else "."
+                    from tools.files import list_directory
+                    res = list_directory(target_path)
+                    if res.get("success"):
+                        table = Table(title=f"Directory Listing: {target_path}", border_style="cyan", box=box.ROUNDED)
+                        table.add_column("Type", style="yellow", width=8)
+                        table.add_column("Name", style="bold cyan")
+                        table.add_column("Size", justify="right", style="dim")
+                        for item in res.get("items", []):
+                            table.add_row(item.get("type", "file"), item.get("name", ""), str(item.get("size", "-")))
+                        console.print(table)
                     else:
                         console.print(f"[bold red]  [FAIL] {res.get('error')}[/]")
+
+                elif cmd == "/project":
+                    from core.project_aware import project_inspector
+                    profile = project_inspector.inspect(".", force_refresh=True)
+                    console.print(Panel(
+                        f"[bold cyan]Project Profile:[/] {profile.name}\n\n"
+                        f"[bold yellow]Languages:[/] {', '.join(profile.languages)}\n"
+                        f"[bold yellow]Frameworks:[/] {', '.join(profile.frameworks) if profile.frameworks else 'None'}\n"
+                        f"[bold yellow]Package Managers:[/] {', '.join(profile.package_managers)}\n"
+                        f"[bold yellow]Entry Points:[/] {', '.join(profile.entry_points)}\n"
+                        f"[bold yellow]Git Status:[/] {profile.git_status}\n"
+                        f"[bold yellow]Build Cmd:[/] `{profile.build_command}`\n"
+                        f"[bold yellow]Test Cmd:[/] `{profile.test_command}`",
+                        title=f"Project Profile",
+                        border_style="cyan"
+                    ))
+
+                elif cmd == "/integrations":
+                    from core.integration_manager import integration_manager
+                    integs = integration_manager.list_integrations()
+                    table = Table(title="Connected Services & External Integrations", border_style="cyan", box=box.ROUNDED)
+                    table.add_column("Integration", style="bold cyan")
+                    table.add_column("Connected", justify="center")
+                    table.add_column("Account / Details", style="yellow")
+                    for i in integs:
+                        tick = "[bold green]✓ Connected[/]" if i["connected"] else "[dim]○ Disconnected[/]"
+                        table.add_row(i["name"].upper(), tick, str(i.get("account", "-")))
+                    console.print(table)
+                    console.print(Panel(
+                        "[dim]How to connect an integration:\n"
+                        "• Connect Telegram:     [cyan]/connect telegram <BOT_TOKEN> [CHAT_ID_OR_CHANNEL][/cyan]\n"
+                        "• Connect Discord:      [cyan]/connect discord <WEBHOOK_URL>[/cyan]\n"
+                        "• Connect GitHub:       [cyan]/connect github <PERSONAL_ACCESS_TOKEN>[/cyan]\n"
+                        "• Connect Google Drive: [cyan]/connect drive <DRIVE_API_TOKEN>[/cyan]\n"
+                        "• Connect Email:        [cyan]/connect email <EMAIL_API_TOKEN>[/cyan]\n"
+                        "• Disconnect service:   [cyan]/disconnect <service_name>[/cyan]\n\n"
+                        "Tokens are encrypted and stored securely in your Encrypted Secret Vault.[/dim]",
+                        border_style="bright_black",
+                        padding=(0, 2)
+                    ))
+
+                elif cmd == "/connect":
+                    if len(parts) < 3:
+                        console.print("[yellow]  Usage: /connect <telegram|discord|github|drive|email> <TOKEN_OR_URL> [chat_id_or_user][/]")
+                    else:
+                        target_service = parts[1].lower()
+                        if target_service in ("drive", "gdrive", "google-drive"):
+                            target_service = "google_drive"
+                        elif target_service in ("tg", "tele"):
+                            target_service = "telegram"
+                        elif target_service in ("disc",):
+                            target_service = "discord"
+
+                        target_token = parts[2]
+                        target_user = parts[3] if len(parts) > 3 else None
+
+                        from core.integration_manager import integration_manager
+                        if integration_manager.connect_integration(target_service, target_token, user=target_user):
+                            console.print(f"[bold green]  [OK] Integration '{target_service.upper()}' successfully connected and saved in Encrypted Vault![/]")
+                        else:
+                            console.print(f"[bold red]  [FAIL] Failed to connect integration '{target_service}'. Verify your token/credentials.[/]")
+
+                elif cmd == "/disconnect":
+                    if len(parts) < 2:
+                        console.print("[yellow]  Usage: /disconnect <telegram|discord|github|drive|email>[/]")
+                    else:
+                        target_service = parts[1].lower()
+                        if target_service in ("drive", "gdrive", "google-drive"):
+                            target_service = "google_drive"
+                        elif target_service in ("tg", "tele"):
+                            target_service = "telegram"
+                        elif target_service in ("disc",):
+                            target_service = "discord"
+
+                        from core.integration_manager import integration_manager
+                        if integration_manager.disconnect_integration(target_service):
+                            console.print(f"[bold green]  [OK] Integration '{target_service.upper()}' disconnected.[/]")
+                        else:
+                            console.print(f"[bold red]  [FAIL] Failed to disconnect integration '{target_service}'.[/]")
+
+                elif cmd == "/tasks":
+                    from core.task_state import task_registry
+                    tasks = task_registry.list_all()
+                    if not tasks:
+                        console.print("[yellow]  No task lifecycle history recorded yet.[/]")
+                    else:
+                        table = Table(title="Task Lifecycle State Machine History", border_style="cyan", box=box.ROUNDED)
+                        table.add_column("Task ID", style="bold cyan")
+                        table.add_column("State", style="yellow")
+                        table.add_column("Goal", style="white")
+                        for t in tasks[-10:]:
+                            table.add_row(t.task_id, t.state.value.upper(), t.goal[:50])
+                        console.print(table)
+
+                elif cmd == "/metrics":
+                    from core.memory_db import get_metrics_summary
+                    metrics = get_metrics_summary(limit=10)
+                    if not metrics:
+                        console.print("[yellow]  No execution metrics recorded yet.[/]")
+                    else:
+                        table = Table(title="Execution Analytics & Metrics Summary", border_style="cyan", box=box.ROUNDED)
+                        table.add_column("Task ID", style="dim")
+                        table.add_column("Provider / Model", style="bold cyan")
+                        table.add_column("Tool Calls", justify="center", style="yellow")
+                        table.add_column("Duration", justify="right", style="green")
+                        for m in metrics:
+                            table.add_row(
+                                str(m.get("task_id", "N/A")),
+                                f"{m.get('provider')}/{m.get('model')}",
+                                str(m.get("tool_calls", 0)),
+                                f"{m.get('duration_seconds', 0.0):.1f}s",
+                            )
+                        console.print(table)
+
+                elif cmd == "/vault":
+                    from core.vault import vault
+                    subcmd = parts[1].lower() if len(parts) > 1 else "list"
+
+                    if subcmd == "status":
+                        status = vault.get_status()
+                        console.print(Panel(
+                            f"[bold cyan]Vault Storage Path:[/] {status['path']}\n"
+                            f"[bold yellow]Vault Exists:[/] {status['exists']}\n"
+                            f"[bold yellow]Lock Status:[/] {'[red]LOCKED[/red]' if status['locked'] else '[green]UNLOCKED[/green]'}\n"
+                            f"[bold yellow]Crypto Backend:[/] {status['backend']}\n"
+                            f"[bold yellow]Total Secrets:[/] {status['secret_count']}\n"
+                            f"[bold yellow]Custom Master Password:[/] {status['has_password']}",
+                            title="🔒 KURO Encrypted Credential Vault Status",
+                            border_style="cyan"
+                        ))
+
+                    elif subcmd == "list":
+                        secrets = vault.list_secrets()
+                        if not secrets:
+                            console.print("[yellow]  Vault is empty or locked. Use /vault set <KEY> <VALUE> or /vault migrate.[/]")
+                        else:
+                            table = Table(title="🔒 KURO Encrypted Secret Vault", border_style="cyan", box=box.ROUNDED)
+                            table.add_column("Secret Key", style="bold cyan")
+                            table.add_column("Encrypted / Masked Value", style="yellow")
+                            table.add_column("Description", style="white")
+                            for s in secrets:
+                                table.add_row(s["key"], s["masked"], s["description"] or "-")
+                            console.print(table)
+                            console.print(Panel(
+                                "[dim]• Set secret:    [cyan]/vault set <KEY> <VALUE> [description][/cyan]\n"
+                                "• Get secret:    [cyan]/vault get <KEY> [--reveal][/cyan]\n"
+                                "• Delete secret: [cyan]/vault delete <KEY>[/cyan]\n"
+                                "• Auto-migrate:  [cyan]/vault migrate[/cyan] (imports API keys from .env)[/dim]",
+                                border_style="bright_black",
+                                padding=(0, 2)
+                            ))
+
+                    elif subcmd == "set":
+                        if len(parts) < 4:
+                            console.print("[yellow]  Usage: /vault set <KEY> <VALUE> [description][/]")
+                        else:
+                            k = parts[2]
+                            v = parts[3]
+                            desc = " ".join(parts[4:]) if len(parts) > 4 else "Stored credential"
+                            if vault.set_secret(k, v, description=desc):
+                                console.print(f"[bold green]  [OK] Secret '{k.upper()}' encrypted and securely stored in vault![/]")
+                            else:
+                                console.print(f"[bold red]  [FAIL] Failed to save secret '{k}'. Vault may be locked.[/]")
+
+                    elif subcmd == "get":
+                        if len(parts) < 3:
+                            console.print("[yellow]  Usage: /vault get <KEY> [--reveal][/]")
+                        else:
+                            k = parts[2]
+                            reveal = "--reveal" in parts or "-r" in parts
+                            sec = vault.get_secret(k)
+                            if sec is None:
+                                console.print(f"[yellow]  Secret '{k.upper()}' not found in vault.[/]")
+                            else:
+                                if reveal:
+                                    console.print(f"[bold green]  {k.upper()}:[/] [white]{sec}[/]")
+                                else:
+                                    from core.vault import mask_secret
+                                    console.print(f"[bold green]  {k.upper()}:[/] [yellow]{mask_secret(sec)}[/] [dim](use --reveal to display plaintext)[/dim]")
+
+                    elif subcmd == "delete":
+                        if len(parts) < 3:
+                            console.print("[yellow]  Usage: /vault delete <KEY>[/]")
+                        else:
+                            k = parts[2]
+                            if vault.delete_secret(k):
+                                console.print(f"[bold green]  [OK] Secret '{k.upper()}' deleted from vault.[/]")
+                            else:
+                                console.print(f"[bold red]  [FAIL] Secret '{k.upper()}' not found or vault is locked.[/]")
+
+                    elif subcmd == "migrate":
+                        count = vault.auto_migrate_from_env()
+                        console.print(f"[bold green]  [OK] Migrated {count} secret(s) from .env into encrypted vault![/]")
+
+                    elif subcmd == "lock":
+                        vault.lock()
+                        console.print("[bold yellow]  [LOCKED] Vault locked and in-memory secrets purged.[/]")
+
+                    elif subcmd == "unlock":
+                        pwd = parts[2] if len(parts) > 2 else None
+                        if vault.unlock(password=pwd):
+                            console.print("[bold green]  [OK] Vault unlocked successfully![/]")
+                        else:
+                            console.print("[bold red]  [FAIL] Failed to unlock vault. Incorrect password or decryption error.[/]")
+
+                    else:
+                        console.print("[yellow]  Usage: /vault <list|status|set|get|delete|migrate|lock|unlock>[/]")
+
+                elif cmd == "/sandbox":
+                    from core.sandbox import sandbox
+                    subcmd = parts[1].lower() if len(parts) > 1 else "status"
+
+                    if subcmd in ("status", "info"):
+                        status = sandbox.get_status()
+                        console.print(Panel(
+                            f"[bold yellow]Sandbox Guard Active:[/] {'[bold green]ENABLED[/bold green]' if status['enabled'] else '[bold red]DISABLED[/bold red]'}\n"
+                            f"[bold yellow]Strict AST Mode:[/] {status['strict_mode']}\n"
+                            f"[bold yellow]Privacy PII Masking:[/] {status['privacy_masking']}\n"
+                            f"[bold yellow]Sandbox Workspace:[/] {status['sandbox_dir']}\n"
+                            f"[bold yellow]Temp Sandbox Files:[/] {status['total_sandbox_files']}",
+                            title="🛡️ KURO Sandbox Guard & Safety Engine",
+                            border_style="cyan"
+                        ))
+
+                    elif subcmd in ("on", "enable"):
+                        sandbox.enable()
+                        console.print("[bold green]  [OK] Sandbox execution guardrail ENABLED.[/]")
+
+                    elif subcmd in ("off", "disable"):
+                        sandbox.disable()
+                        console.print("[bold yellow]  [WARNING] Sandbox execution guardrail DISABLED.[/]")
+
+                    elif subcmd == "toggle":
+                        new_state = sandbox.toggle()
+                        state_str = "[bold green]ENABLED[/bold green]" if new_state else "[bold red]DISABLED[/bold red]"
+                        console.print(f"  [OK] Sandbox guard is now {state_str}.")
+
+                    elif subcmd == "clean":
+                        cleaned = sandbox.clean_sandbox()
+                        console.print(f"[bold green]  [OK] Cleaned {cleaned} temporary files from sandbox workspace.[/]")
+
+                    elif subcmd == "check":
+                        if len(parts) < 3:
+                            console.print("[yellow]  Usage: /sandbox check <python_code_or_file_path>[/]")
+                        else:
+                            target = " ".join(parts[2:])
+                            if Path(target).exists() and Path(target).is_file():
+                                code_to_check = Path(target).read_text(encoding="utf-8")
+                            else:
+                                code_to_check = target
+                            rep = sandbox.validate_python_code(code_to_check)
+                            table = Table(title="AST Code Safety Inspection", border_style="cyan", box=box.ROUNDED)
+                            table.add_column("Property", style="bold cyan")
+                            table.add_column("Value", style="yellow")
+                            table.add_row("Is Safe", str(rep.is_safe))
+                            table.add_row("Risk Level", rep.risk_level)
+                            table.add_row("Violations", "\n".join(rep.violations) if rep.violations else "None")
+                            table.add_row("Warnings", "\n".join(rep.warnings) if rep.warnings else "None")
+                            console.print(table)
+
+                    else:
+                        console.print("[yellow]  Usage: /sandbox <status|on|off|toggle|clean|check>[/]")
+
+                elif cmd == "/safe":
+                    from core.permissions import default_gate
+                    subcmd = parts[1].lower() if len(parts) > 1 else "status"
+
+                    if subcmd in ("status", "info"):
+                        status_str = "[bold green]ENABLED (Prompt for impactful actions)[/bold green]" if config.SAFE_MODE else "[bold yellow]DISABLED (Auto-allow confirmable actions)[/bold yellow]"
+                        overrides = list(default_gate._overrides.keys())
+                        overrides_str = ", ".join(overrides) if overrides else "None"
+                        console.print(Panel(
+                            f"[bold cyan]Safe Mode Status:[/] {status_str}\n"
+                            f"[bold yellow]Tool Overrides (Always Allowed):[/] {overrides_str}\n\n"
+                            "[dim]• Enable Safe Mode:      [cyan]/safe on[/cyan]\n"
+                            "• Disable Safe Mode:     [cyan]/safe off[/cyan]\n"
+                            "• Toggle:                [cyan]/safe toggle[/cyan]\n"
+                            "• Always Allow One Tool: [cyan]/safe allow <tool_name>[/cyan] (e.g. /safe allow execute_python)\n"
+                            "• Clear Overrides:       [cyan]/safe clear[/cyan][/dim]",
+                            title="🛡️ KURO Permission Gate & Safe Mode",
+                            border_style="cyan"
+                        ))
+
+                    elif subcmd in ("on", "enable"):
+                        config.SAFE_MODE = True
+                        default_gate.set_safe_mode(True)
+                        console.print("[bold green]  [OK] Safe Mode ENABLED. Impactful actions will prompt for confirmation.[/]")
+
+                    elif subcmd in ("off", "disable"):
+                        config.SAFE_MODE = False
+                        default_gate.set_safe_mode(False)
+                        console.print("[bold yellow]  [WARNING] Safe Mode DISABLED. Autonomous tools (Python, file writes, commands) will execute without prompting.[/]")
+
+                    elif subcmd == "toggle":
+                        config.SAFE_MODE = not config.SAFE_MODE
+                        default_gate.set_safe_mode(config.SAFE_MODE)
+                        state_str = "[bold green]ENABLED[/bold green]" if config.SAFE_MODE else "[bold yellow]DISABLED[/bold yellow]"
+                        console.print(f"  [OK] Safe Mode is now {state_str}.")
+
+                    elif subcmd == "allow":
+                        if len(parts) < 3:
+                            console.print("[yellow]  Usage: /safe allow <action_name>  (e.g. /safe allow execute_python)[/]")
+                        else:
+                            target_tool = parts[2]
+                            default_gate.allow_action(target_tool)
+                            console.print(f"[bold green]  [OK] Tool '{target_tool}' will now always be permitted without confirmation prompts.[/]")
+
+                    elif subcmd in ("clear", "reset"):
+                        default_gate.clear_overrides()
+                        console.print("[bold green]  [OK] Cleared all tool permission overrides.[/]")
+
+                    else:
+                        console.print("[yellow]  Usage: /safe <status|on|off|toggle|allow <tool>|clear>[/]")
 
                 else:
                     console.print(f"[yellow]  Unknown command '{cmd}'. Type /help.[/]")

@@ -226,7 +226,14 @@ def _call_openai_compatible(
     messages = [{"role": "system", "content": system_prompt}]
     if history:
         for item in history:
-            messages.append({"role": item.get("role", "user"), "content": item.get("content", "")})
+            raw_role = item.get("role", "user")
+            if raw_role in ("model", "assistant", "ai"):
+                norm_role = "assistant"
+            elif raw_role in ("system",):
+                norm_role = "system"
+            else:
+                norm_role = "user"
+            messages.append({"role": norm_role, "content": item.get("content", "")})
     messages.append({"role": "user", "content": prompt})
 
     payload = {

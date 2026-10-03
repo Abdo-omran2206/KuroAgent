@@ -12,6 +12,14 @@ from core import config
 from core import memory
 from core import personality
 from core.llm import ask_llm
+from core.permissions import check_permission, RiskLevel
+from core.task_state import TaskState, task_registry
+from core.context_engine import context_engine
+from core.verification import verification_engine, VerificationStatus
+from core.model_router import model_router, ExecutionMetrics
+from core.logger import logger
+from core.plugin_registry import registry, ToolContract
+
 from tools.system import run_command, get_system_info
 from tools.files import read_file, write_file, create_file, edit_file, list_directory, get_repo_tree, execute_sql_query, write_md_note
 from tools.interpreter import execute_python_code
@@ -68,12 +76,35 @@ def _safe_json_parse(raw_json: str) -> Optional[Dict[str, Any]]:
 class KuroAgent:
     """
     KURO Level 2 Autonomous System Assistant.
-    Implements a robust multi-step ReAct (Reasoning + Acting) autonomous execution loop.
+    Implements a robust ReAct (Think -> Plan -> Act -> Observe -> Verify -> Reflect) execution loop.
     """
 
     def __init__(self):
         self.provider = config.get_active_provider()
         self.model = config.get_active_model(self.provider)
+        self._register_builtin_tools()
+
+    def _register_builtin_tools(self):
+        """Registers built-in tools into the PluginRegistry if not already registered."""
+        if registry.has_tool("run_command"):
+            return
+
+        registry.register_function("run_command", "Execute shell command", lambda cmd="": run_command(cmd, confirm_if_risky=config.SAFE_MODE), RiskLevel.CONFIRM)
+        registry.register_function("read_file", "Read file content", lambda path="": read_file(path), RiskLevel.SAFE)
+        registry.register_function("write_file", "Write content to file", lambda path="", content="": write_file(path, content), RiskLevel.CONFIRM)
+        registry.register_function("edit_file", "Edit file substring", lambda path="", target="", replacement="": edit_file(path, target, replacement), RiskLevel.CONFIRM)
+        registry.register_function("list_dir", "List directory contents", lambda path=".": list_directory(path), RiskLevel.SAFE)
+        registry.register_function("execute_python", "Execute Python code", lambda code="": execute_python_code(code), RiskLevel.CONFIRM)
+        registry.register_function("search_web", "Search web", lambda query="": search_web(query), RiskLevel.SAFE)
+        registry.register_function("fetch_url", "Fetch URL content", lambda url="": fetch_url(url), RiskLevel.SAFE)
+        registry.register_function("analyze_image", "Analyze image", lambda path="", prompt="": analyze_image_tool(path, prompt), RiskLevel.SAFE)
+        registry.register_function("browse_web", "Headless web browse", lambda url="": browse_web_headless(url), RiskLevel.SAFE)
+        registry.register_function("automate_browser", "Automate browser", lambda url="", actions=[]: automate_browser(url, actions), RiskLevel.CONFIRM)
+        registry.register_function("send_notification", "Send toast notification", lambda title="", message="": send_toast_notification(title, message), RiskLevel.CONFIRM)
+        registry.register_function("inspect_db", "Inspect DB schema/table", lambda db_path="brain/kuro.db", op="list_tables", table_name=None, query=None: explore_database(db_path, op, table_name=table_name, query=query), RiskLevel.SAFE)
+        registry.register_function("execute_sql", "Execute SQL query", lambda db_path="brain/kuro.db", query="": execute_sql_query(db_path, query), RiskLevel.CONFIRM)
+        registry.register_function("write_md", "Write Markdown note", lambda path="", title="", content="": write_md_note(path, title, content), RiskLevel.CONFIRM)
+        registry.register_function("save_skill", "Save learned skill", lambda name="", description="", steps="": save_learned_skill(name, description, steps), RiskLevel.CONFIRM)
 
     def _build_system_context(self) -> str:
         """Constructs live system prompt with environmental context, self-awareness, learned skills, and tool schemas."""
@@ -183,12 +214,24 @@ class KuroAgent:
 
         return None, text
 
-    def execute_tool(self, tool_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Executes selected tool action with error boundaries and visual rendering."""
+    def execute_tool(self, tool_data: Dict[str, Any], interactive: bool = True) -> Dict[str, Any]:
+        """Executes selected tool action with centralized permission gate & visual feedback."""
         if not isinstance(tool_data, dict) or "action" not in tool_data:
             return {"success": False, "error": "Invalid action data payload format."}
 
         action = tool_data.get("action")
+
+        # Check centralized permission gate
+        perm_res = check_permission(action, context=str(tool_data), interactive=interactive)
+        if not perm_res.allowed:
+            logger.permission(action, perm_res.risk.value, False)
+            if perm_res.requires_confirmation:
+                return {
+                    "success": False,
+                    "requires_confirmation": True,
+                    "stderr": f"Action '{action}' was denied by user or requires confirmation ({perm_res.reason}). Execution halted in Safe Mode."
+                }
+            return {"success": False, "error": f"Permission Denied for action '{action}': {perm_res.reason}"}
 
         try:
             # Create auto-checkpoint before file modifications
@@ -310,6 +353,10 @@ class KuroAgent:
                 console.print(f"  [bold green][Self-Improvement][/] Learning new routine: [white]{name}[/]")
                 return save_learned_skill(name, desc, steps)
 
+            # Fallback to PluginRegistry if registered
+            if registry.has_tool(action):
+                return registry.execute_tool(action, tool_data)
+
             return {"success": False, "error": f"Unknown action '{action}'"}
         except Exception as e:
             console.print(f"  [bold red][Tool Execution Error][/] {str(e)}")
@@ -317,20 +364,35 @@ class KuroAgent:
 
     def run(self, user_input: str) -> str:
         """
-        Level 2 Multi-Step Autonomous ReAct Loop:
-        Executes sequential actions until complete or max_steps reached.
+        Level 2 ReAct Autonomous Loop with Task State Tracking, Smart Context Retrieval,
+        Verification, and Model Routing.
         """
-        system_context = self._build_system_context()
-        memory_context = memory.get_formatted_context(limit=4)
-        
-        step_history: List[Dict[str, str]] = []
-        if memory_context:
-            step_history.append({"role": "user", "content": f"Prior Conversation History:\n{memory_context}"})
+        # Create Task in Task Registry
+        task = task_registry.create(goal=user_input)
+        task.mark_planning()
 
+        # Select Provider and Model via ModelRouter
+        routed_provider, routed_model, task_type = model_router.select_route(
+            user_input, preferred_provider=self.provider, preferred_model=self.model
+        )
+        metrics = ExecutionMetrics(task_id=task.task_id)
+        metrics.provider = routed_provider
+        metrics.model = routed_model
+
+        system_context = self._build_system_context()
+        
+        # Build smart context using ContextEngine
+        context_str = context_engine.build(user_input=user_input, task_goal=user_input, task_id=task.task_id)
+
+        step_history: List[Dict[str, str]] = []
+        if context_str:
+            step_history.append({"role": "user", "content": context_str})
+
+        task.mark_executing()
         current_prompt = user_input
         final_answer = ""
 
-        console.print(f"[bold cyan]>> Starting autonomous execution...[/]")
+        console.print(f"[bold cyan]>> Starting autonomous execution [{task.task_id}]...[/]")
 
         for step_idx in range(1, config.MAX_AUTONOMOUS_STEPS + 1):
             console.print(f"[dim]Step {step_idx}/{config.MAX_AUTONOMOUS_STEPS}...[/]")
@@ -338,26 +400,27 @@ class KuroAgent:
             response = ask_llm(
                 prompt=current_prompt,
                 system_prompt=system_context,
-                provider=self.provider,
-                model=self.model,
+                provider=routed_provider,
+                model=routed_model,
                 history=step_history
             )
 
             tool_data, clean_thought = self.parse_tool_call(response)
 
-            # If clean thoughts or reasoning were printed
+            # Print thought process if clean
             if clean_thought and clean_thought != response and clean_thought.strip():
                 console.print(f"[italic dim]{clean_thought}[/]")
 
-            # No tool call means KURO has formulated its final response
+            # No tool call -> Final Response reached
             if not tool_data:
                 final_answer = response
                 break
 
-            # Execute tool
+            # Execute tool action
+            metrics.record_tool_call()
             tool_result = self.execute_tool(tool_data)
 
-            # Safety check intercept
+            # Intercept for user confirmation failure
             if tool_result.get("requires_confirmation"):
                 console.print(Panel(
                     f"[bold red]SAFETY WARNING[/]\n{tool_result.get('stderr')}\n"
@@ -365,9 +428,20 @@ class KuroAgent:
                     title="Action Intercepted"
                 ))
                 final_answer = f"[Execution Halted] {tool_result.get('stderr')}"
+                task.mark_failed("Safety verification failed or user denied confirmation")
                 break
 
-            # Format tool result for next iteration
+            # ── Verification Phase ──────────────────────────────────────────
+            task.mark_verifying()
+            v_res = verification_engine.verify_action(tool_data.get("action", ""), tool_data, tool_result)
+            logger.verification(v_res.strategy, v_res.message, success=v_res.is_success)
+
+            if not v_res.is_success:
+                console.print(f"  [bold yellow][Verification Failure][/] {v_res.message}")
+
+            task.mark_executing()
+
+            # Format tool observation + verification feedback for next iteration
             obs_parts = []
             if tool_result.get("stdout"):
                 obs_parts.append(f"STDOUT:\n{tool_result.get('stdout')}")
@@ -383,29 +457,31 @@ class KuroAgent:
                 obs_parts.append(f"ERROR: {tool_result.get('error')}")
 
             observation = "\n".join(obs_parts) if obs_parts else "Action executed successfully with no output."
+            verification_note = f"\n[Verification Check: {v_res.status.value.upper()}] {v_res.message}"
 
-            # Update step history for LLM
             step_history.append({"role": "user", "content": current_prompt})
             step_history.append({"role": "model", "content": response})
 
             current_prompt = (
                 f"[Tool Observation for '{tool_data.get('action')}']\n"
-                f"{observation}\n\n"
-                f"Now analyze these observations. If you need further action, output the next JSON action block. "
-                f"Otherwise, provide your final complete, insightful answer to the user."
+                f"{observation}\n"
+                f"{verification_note}\n\n"
+                f"Analyze these findings and verification results. Output the next action JSON block if more steps are needed, "
+                f"or provide your final complete answer in clean Markdown."
             )
 
         if not final_answer:
-            # Fallback final synthesis if step limit reached
             synthesis_prompt = f"User Request: {user_input}\nPlease summarize all gathered findings and provide the final answer."
-            final_answer = ask_llm(synthesis_prompt, system_context, self.provider, self.model, step_history)
+            final_answer = ask_llm(synthesis_prompt, system_context, routed_provider, routed_model, step_history)
 
-        # Sanitize final response from any leftover raw JSON syntax
         final_tool, clean_final = self.parse_tool_call(final_answer)
         if final_tool and clean_final:
             final_answer = clean_final
 
+        # Mark task completed & record metrics
+        task.mark_completed(final_answer[:200])
+        metrics.finish(success=True)
+
         # Save to memory
         memory.save_memory(user_input, final_answer)
-        # NOTE: voice TTS is triggered by print_kuro_response() in main.py
         return final_answer

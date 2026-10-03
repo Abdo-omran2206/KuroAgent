@@ -10,16 +10,15 @@ try:
 except ImportError:
     pass
 
-# Base & Brain directories
-BASE_DIR = Path(__file__).resolve().parent.parent
-BRAIN_DIR = BASE_DIR / "brain"
-BRAIN_DIR.mkdir(parents=True, exist_ok=True)
-
-# Config & Storage Locations
-MEMORY_FILE = BRAIN_DIR / "memory.json"
-SYSTEM_PROMPT_FILE = BRAIN_DIR / "kuro_prompt.txt"
-PERSONALITY_FILE = BRAIN_DIR / "personality.md"
-ENV_FILE = BASE_DIR / ".env"
+from core.paths import (
+    APP_DIR as BASE_DIR,
+    BRAIN_DIR,
+    MEMORY_JSON as MEMORY_FILE,
+    SYSTEM_PROMPT_FILE,
+    PERSONALITY_FILE,
+    ENV_FILE,
+)
+from core.vault import vault
 
 # Autonomous Agent Settings
 MAX_AUTONOMOUS_STEPS = int(os.getenv("KURO_MAX_STEPS", "10"))
@@ -79,8 +78,23 @@ def _is_valid_key(key: str) -> bool:
 
 
 def _parse_keys_from_env(key_name: str, single_name: str = None) -> List[str]:
-    """Parses a list of API keys from comma-separated string or multiple env vars, ignoring dummy placeholders."""
+    """Parses a list of API keys from vault and env vars, ignoring dummy placeholders."""
     keys = []
+    
+    # Check Vault first
+    if single_name:
+        v_single = vault.get_secret(single_name)
+        if v_single and _is_valid_key(v_single) and v_single not in keys:
+            keys.append(v_single)
+    if key_name:
+        v_plural = vault.get_secret(key_name)
+        if v_plural:
+            for k in v_plural.split(","):
+                k_clean = k.strip()
+                if _is_valid_key(k_clean) and k_clean not in keys:
+                    keys.append(k_clean)
+
+    # Fallback/merge with Environment Variables
     val = os.getenv(key_name, "")
     if val:
         for k in val.split(","):
@@ -170,12 +184,18 @@ def get_active_model(provider: str = None) -> str:
 
 
 def save_api_key(key: str, provider: str = "gemini") -> bool:
-    """Saves API key to KeyPool and persists to .env file."""
+    """Saves API key to KeyPool, Encrypted Vault, and persists to .env file."""
     p = provider.lower()
     if p not in KEY_POOLS:
         KEY_POOLS[p] = KeyPool(p, [])
     
     KEY_POOLS[p].add_key(key)
+
+    single_key_name = f"{p.upper()}_API_KEY"
+    plural_key_name = f"{p.upper()}_API_KEYS"
+
+    # Store in Encrypted Vault
+    vault.set_secret(single_key_name, key, description=f"{provider.upper()} API Key")
 
     env_vars = {}
     if ENV_FILE.exists():
@@ -184,9 +204,6 @@ def save_api_key(key: str, provider: str = "gemini") -> bool:
             if line and not line.startswith("#") and "=" in line:
                 k, v = line.split("=", 1)
                 env_vars[k.strip()] = v.strip()
-
-    single_key_name = f"{p.upper()}_API_KEY"
-    plural_key_name = f"{p.upper()}_API_KEYS"
 
     # Append to existing keys if present
     existing = env_vars.get(plural_key_name, env_vars.get(single_key_name, ""))

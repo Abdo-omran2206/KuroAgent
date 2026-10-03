@@ -4,6 +4,9 @@ typer>=0.9.0
 prompt_toolkit>=3.0.0
 python-dotenv>=1.0.0
 
+# Security & Privacy Vault
+cryptography>=41.0.0    # Optional: Fernet/AES-GCM encryption for Vault
+
 # Voice & Audio
 edge-tts>=6.1.9
 pygame>=2.6.0

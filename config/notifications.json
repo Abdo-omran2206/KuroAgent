@@ -1,0 +1,10 @@
+{
+  "discord_webhook": "",
+  "telegram_token": "7796646262:AAHg7LmKELwa5SrjWh3IzqQZcFSd82_XyCc",
+  "telegram_chat_id": "1402858789",
+  "slack_webhook": "",
+  "default_channels": [
+    "toast"
+  ],
+  "sound_enabled": true
+}
