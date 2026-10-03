@@ -36,7 +36,7 @@ try:
             continue
 
     if _cached_cell_table is None:
-        _cached_cell_table = CellTable(unicode_version="15.1.0", widths=(), narrow_to_wide=frozenset())
+        _cached_cell_table = CellTable(unicode_version="15.1.0", widths=((0, 0x10FFFF, 1),), narrow_to_wide=frozenset())
 
     def _bulletproof_unicode_load(unicode_version="auto"):
         return _cached_cell_table
