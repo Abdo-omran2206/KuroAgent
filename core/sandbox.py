@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple, Set
 
 from core.paths import SANDBOX_DIR, APP_DIR, USER_DATA_DIR
-from core.logger import logger
 
 
 # Banned dangerous modules and attribute access patterns
@@ -158,11 +157,9 @@ class SandboxGuard:
 
     def enable(self) -> None:
         self._enabled = True
-        logger.info("[Sandbox] Security sandbox activated.")
 
     def disable(self) -> None:
         self._enabled = False
-        logger.warning("[Sandbox] Security sandbox deactivated.")
 
     def toggle(self) -> bool:
         self._enabled = not self._enabled
@@ -288,8 +285,8 @@ class SandboxGuard:
                     import shutil
                     shutil.rmtree(item)
                     count += 1
-            except Exception as e:
-                logger.warning(f"[Sandbox] Could not delete '{item}': {e}")
+            except Exception:
+                pass
         return count
 
 

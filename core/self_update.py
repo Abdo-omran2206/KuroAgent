@@ -30,7 +30,6 @@ import tempfile
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from core.logger import logger
 from core.paths import APP_DIR, UPDATES_DIR
 from core.permissions import check_permission
 
@@ -62,12 +61,8 @@ class SelfUpdatePipeline:
         if not str(target_path).startswith(str(APP_DIR.resolve())):
             return {"success": False, "stage": "path_check", "error": "Target file is outside APP_DIR."}
 
-        logger.info(f"Starting self-modification pipeline on '{target_file}'...")
-
         # 2. Git Checkpoint
         checkpoint_ok = self._create_git_checkpoint(f"Pre-self-update: {target_file}")
-        if not checkpoint_ok:
-            logger.warning("Git checkpoint not available — proceeding with local file backup.")
 
         # Create isolated staging workspace
         staging_dir = Path(tempfile.mkdtemp(prefix="kuro_stage_"))
@@ -81,7 +76,6 @@ class SelfUpdatePipeline:
             # 4. Run Static Syntax Checks
             syntax_ok, syntax_err = self._run_syntax_check(staged_file)
             if not syntax_ok:
-                logger.error("Self-modification candidate failed syntax check", {"error": syntax_err})
                 return {
                     "success": False,
                     "stage": "syntax_check",
@@ -92,7 +86,6 @@ class SelfUpdatePipeline:
             # 5. Run Test Suite on Staged Version
             tests_ok, test_out = self._run_tests()
             if not tests_ok:
-                logger.error("Self-modification candidate failed unit tests", {"output": test_out[:300]})
                 return {
                     "success": False,
                     "stage": "test_verification",
@@ -103,7 +96,6 @@ class SelfUpdatePipeline:
             # 6. Apply / Promote Change
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(staged_file, target_path)
-            logger.info(f"Self-modification successfully validated and promoted to '{target_file}'.")
 
             return {
                 "success": True,
@@ -112,7 +104,6 @@ class SelfUpdatePipeline:
             }
 
         except Exception as e:
-            logger.error("Exception during self-modification pipeline", {"error": str(e)})
             self.rollback_git_checkpoint()
             return {"success": False, "stage": "exception", "error": str(e), "rolled_back": True}
 

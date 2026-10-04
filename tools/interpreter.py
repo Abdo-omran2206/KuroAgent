@@ -11,7 +11,6 @@ import traceback
 from typing import Dict, Any, Optional
 
 from core.sandbox import sandbox
-from core.logger import logger
 
 
 def execute_python_code(code: str, custom_globals: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -22,7 +21,6 @@ def execute_python_code(code: str, custom_globals: Optional[Dict[str, Any]] = No
     # 1. AST Safety Pre-Check
     report = sandbox.validate_python_code(code)
     if not report.is_safe:
-        logger.warning(f"[Interpreter] Blocked unsafe execution attempt: {report.violations}")
         return {
             "success": False,
             "stdout": "",

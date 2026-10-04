@@ -13,8 +13,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-
-from core.logger import logger
 from core.paths import ENV_FILE
 from core.vault import vault
 from integrations.base import BaseIntegration, IntegrationActionType
@@ -49,7 +47,6 @@ class IntegrationManager:
 
     def register_integration(self, integration: BaseIntegration) -> None:
         self._integrations[integration.name] = integration
-        logger.info(f"Registered integration '{integration.name}' v{integration.version}")
 
     def get_integration(self, name: str) -> Optional[BaseIntegration]:
         return self._integrations.get(name.lower())
@@ -95,7 +92,6 @@ class IntegrationManager:
                     vault.set_secret(user_var, user, description=f"{clean_name.upper()} user/chat_id")
                 self._persist_to_env(token_var, token, user_var, user)
 
-            logger.info(f"Successfully connected integration '{clean_name}'.")
             return True
         return False
 
@@ -125,8 +121,8 @@ class IntegrationManager:
         try:
             lines = [f"{k}={v}" for k, v in env_vars.items()]
             ENV_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        except Exception as e:
-            logger.error(f"Failed to write to .env file: {e}")
+        except Exception:
+            pass
 
     def route_intent(self, prompt: str) -> Optional[BaseIntegration]:
         """

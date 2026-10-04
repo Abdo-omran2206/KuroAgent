@@ -20,8 +20,6 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
-from core.logger import logger
-
 
 @dataclass
 class CandidateSolution:
@@ -70,7 +68,6 @@ class ExperimentRunner:
         """
         Executes candidate solutions, evaluates them, and records the winner.
         """
-        logger.info(f"Running experiment '{experiment_id}' with {len(candidates)} candidates.")
         candidate_records = []
         best_score = -1.0
         winner_name = None
@@ -118,7 +115,6 @@ class ExperimentRunner:
             winner_name=winner_name,
         )
 
-        logger.info(f"Experiment '{experiment_id}' completed. Winner: '{winner_name}' (score: {best_score:.1f})")
         return report
 
 

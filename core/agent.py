@@ -11,13 +11,13 @@ from rich.table import Table
 from core import config
 from core import memory
 from core import personality
+from core.paths import DB_PATH
 from core.llm import ask_llm
 from core.permissions import check_permission, RiskLevel
 from core.task_state import TaskState, task_registry
 from core.context_engine import context_engine
 from core.verification import verification_engine, VerificationStatus
 from core.model_router import model_router, ExecutionMetrics
-from core.logger import logger
 from core.plugin_registry import registry, ToolContract
 
 from tools.system import run_command, get_system_info
@@ -101,8 +101,8 @@ class KuroAgent:
         registry.register_function("browse_web", "Headless web browse", lambda url="": browse_web_headless(url), RiskLevel.SAFE)
         registry.register_function("automate_browser", "Automate browser", lambda url="", actions=[]: automate_browser(url, actions), RiskLevel.CONFIRM)
         registry.register_function("send_notification", "Send toast notification", lambda title="", message="": send_toast_notification(title, message), RiskLevel.CONFIRM)
-        registry.register_function("inspect_db", "Inspect DB schema/table", lambda db_path="brain/kuro.db", op="list_tables", table_name=None, query=None: explore_database(db_path, op, table_name=table_name, query=query), RiskLevel.SAFE)
-        registry.register_function("execute_sql", "Execute SQL query", lambda db_path="brain/kuro.db", query="": execute_sql_query(db_path, query), RiskLevel.CONFIRM)
+        registry.register_function("inspect_db", "Inspect DB schema/table", lambda db_path=str(DB_PATH), op="list_tables", table_name=None, query=None: explore_database(db_path, op, table_name=table_name, query=query), RiskLevel.SAFE)
+        registry.register_function("execute_sql", "Execute SQL query", lambda db_path=str(DB_PATH), query="": execute_sql_query(db_path, query), RiskLevel.CONFIRM)
         registry.register_function("write_md", "Write Markdown note", lambda path="", title="", content="": write_md_note(path, title, content), RiskLevel.CONFIRM)
         registry.register_function("save_skill", "Save learned skill", lambda name="", description="", steps="": save_learned_skill(name, description, steps), RiskLevel.CONFIRM)
 
@@ -224,7 +224,6 @@ class KuroAgent:
         # Check centralized permission gate
         perm_res = check_permission(action, context=str(tool_data), interactive=interactive)
         if not perm_res.allowed:
-            logger.permission(action, perm_res.risk.value, False)
             if perm_res.requires_confirmation:
                 return {
                     "success": False,
@@ -434,7 +433,6 @@ class KuroAgent:
             # ── Verification Phase ──────────────────────────────────────────
             task.mark_verifying()
             v_res = verification_engine.verify_action(tool_data.get("action", ""), tool_data, tool_result)
-            logger.verification(v_res.strategy, v_res.message, success=v_res.is_success)
 
             if not v_res.is_success:
                 console.print(f"  [bold yellow][Verification Failure][/] {v_res.message}")

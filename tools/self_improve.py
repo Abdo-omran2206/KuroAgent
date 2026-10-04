@@ -3,8 +3,9 @@ import re
 import json
 from pathlib import Path
 from typing import Dict, Any, List
+from core.paths import SCRATCH_DIR
 
-SKILLS_DIR = Path("scratch/skills")
+SKILLS_DIR = SCRATCH_DIR / "skills"
 
 def ensure_skills_dir():
     SKILLS_DIR.mkdir(parents=True, exist_ok=True)

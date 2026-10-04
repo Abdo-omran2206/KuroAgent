@@ -26,7 +26,6 @@ from typing import Dict, Any, List, Optional, Tuple
 from pathlib import Path
 
 from core.paths import VAULT_FILE, CONFIG_DIR
-from core.logger import logger
 
 
 # Windows DPAPI Structures & Functions (ctypes)
@@ -54,8 +53,8 @@ def _dpapi_encrypt(data: bytes, description: str = "KuroVault") -> Optional[byte
             encrypted_data = ctypes.string_at(blob_out.pbData, blob_out.cbData)
             kernel32.LocalFree(blob_out.pbData)
             return encrypted_data
-    except Exception as e:
-        logger.debug(f"[Vault] DPAPI encrypt error: {e}")
+    except Exception:
+        pass
     return None
 
 
@@ -75,8 +74,8 @@ def _dpapi_decrypt(data: bytes) -> Optional[bytes]:
             decrypted_data = ctypes.string_at(blob_out.pbData, blob_out.cbData)
             kernel32.LocalFree(blob_out.pbData)
             return decrypted_data
-    except Exception as e:
-        logger.debug(f"[Vault] DPAPI decrypt error: {e}")
+    except Exception:
+        pass
     return None
 
 
@@ -138,7 +137,6 @@ class VaultManager:
         """Locks the vault and purges secrets from memory."""
         self._secrets.clear()
         self._locked = True
-        logger.info("[Vault] Vault locked. In-memory secrets cleared.")
 
     def unlock(self, password: Optional[str] = None) -> bool:
         """Unlocks the vault with optional master password."""
@@ -238,8 +236,7 @@ class VaultManager:
                 dec_bytes = f.decrypt(enc_bytes)
                 self._backend = "fernet_aes"
                 return dec_bytes.decode("utf-8")
-            except Exception as e:
-                logger.debug(f"[Vault] Fernet decrypt error: {e}")
+            except Exception:
                 return None
 
         # 3. PBKDF2 HMAC fallback
@@ -255,14 +252,12 @@ class VaultManager:
                 actual_tag = hmac.new(key, iv + ciphertext, hashlib.sha256).digest()
 
                 if not hmac.compare_digest(expected_tag, actual_tag):
-                    logger.warning("[Vault] Integrity verification failed (wrong password or corrupted vault).")
                     return None
 
                 plaintext = _keystream_cipher(ciphertext, key, iv)
                 self._backend = "pbkdf2_hmac_sha256"
                 return plaintext.decode("utf-8")
-            except Exception as e:
-                logger.debug(f"[Vault] PBKDF2 decrypt error: {e}")
+            except Exception:
                 return None
 
         return None
@@ -280,14 +275,12 @@ class VaultManager:
 
             if decrypted_json is None:
                 self._locked = True
-                logger.warning("[Vault] Could not decrypt vault. Marked as LOCKED.")
                 return False
 
             self._secrets = json.loads(decrypted_json)
             self._locked = False
             return True
-        except Exception as e:
-            logger.error(f"[Vault] Failed to load vault: {e}")
+        except Exception:
             self._locked = True
             return False
 
@@ -299,8 +292,7 @@ class VaultManager:
             payload = self._encrypt_payload(raw_json)
             self.vault_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
             return True
-        except Exception as e:
-            logger.error(f"[Vault] Failed to save vault: {e}")
+        except Exception:
             return False
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -310,7 +302,6 @@ class VaultManager:
     def set_secret(self, key: str, value: str, description: str = "") -> bool:
         """Stores or updates a secret key-value pair."""
         if self._locked:
-            logger.warning("[Vault] Cannot set secret while vault is locked.")
             return False
 
         clean_key = key.strip().upper()
@@ -404,8 +395,8 @@ class VaultManager:
                         if k_clean not in self._secrets:
                             self.set_secret(k_clean, v_clean, description="Auto-migrated from .env")
                             migrated_count += 1
-        except Exception as e:
-            logger.error(f"[Vault] Migration from .env failed: {e}")
+        except Exception:
+            pass
 
         return migrated_count
 

@@ -53,8 +53,8 @@ def save_memory(user_input: str, response: str, metadata: Dict[str, Any] = None)
     try:
         from core import memory_db
         memory_db.save_chat_entry(user_input, response, metadata)
-    except Exception as e:
-        print(f"[Warning] SQLite memory write error: {e}")
+    except Exception:
+        pass
 
     # Also update JSON cache
     memory = load_memory()
@@ -73,8 +73,8 @@ def save_memory(user_input: str, response: str, metadata: Dict[str, Any] = None)
     try:
         with open(config.MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(memory, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        print(f"[Warning] Failed to write memory cache: {e}")
+    except Exception:
+        pass
 
     # Auto-compress/summarize memory if items exceed threshold
     if len(memory) >= 10 and len(memory) % 5 == 0:

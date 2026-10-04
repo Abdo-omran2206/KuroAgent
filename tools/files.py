@@ -111,6 +111,11 @@ def list_directory(path_str: str = ".") -> Dict[str, Any]:
         return {"success": False, "items": [], "error": str(e)}
 
 
+def is_read_sql_query(query: str) -> bool:
+    """Returns True if SQL query is a read-only statement (SELECT, PRAGMA, EXPLAIN)."""
+    return query.strip().upper().startswith(("SELECT", "PRAGMA", "EXPLAIN"))
+
+
 def execute_sql_query(db_path_str: str, query: str, params: tuple = ()) -> Dict[str, Any]:
     """Executes a SQL query or script against a SQLite database file (.db / .sql)."""
     import sqlite3
@@ -131,7 +136,7 @@ def execute_sql_query(db_path_str: str, query: str, params: tuple = ()) -> Dict[
             return {"success": True, "rows": [], "message": "SQL script executed successfully."}
 
         cursor.execute(query, params)
-        if query.strip().upper().startswith(("SELECT", "PRAGMA", "EXPLAIN")):
+        if is_read_sql_query(query):
             rows = [dict(row) for row in cursor.fetchall()]
             return {"success": True, "rows": rows, "count": len(rows)}
         else:

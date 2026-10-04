@@ -71,6 +71,7 @@ from core import config
 from core import memory
 from core.llm import ask_llm
 from core.agent import KuroAgent
+from core.paths import DB_PATH
 from tools.system import run_command
 from tools.git_checkpoint import rollback_checkpoint
 from tools.web import search_web
@@ -584,8 +585,8 @@ def main(
             res = run_command(cmd)
             print_shell_output(cmd, res)
         else:
-            with Live(Spinner("dots", text="[cyan]KURO thinking...[/]"), refresh_per_second=12, console=console):
-                response = agent.run(query)
+            console.print("[cyan]KURO is thinking...[/]")
+            response = agent.run(query)
             print_kuro_response(response)
         sys.exit(0)
 
@@ -848,10 +849,10 @@ def main(
 
                 elif cmd == "/sql":
                     if len(parts) < 2:
-                        console.print("[yellow]  Usage: /sql <query_or_script>  (runs against brain/kuro.db)[/]")
+                        console.print("[yellow]  Usage: /sql <query_or_script>  (runs against the KURO brain database)[/]")
                     else:
                         q = " ".join(parts[1:])
-                        res = execute_sql_query("brain/kuro.db", q)
+                        res = execute_sql_query(str(DB_PATH), q)
                         if res.get("success"):
                             rows = res.get("rows", [])
                             if rows:
@@ -1042,7 +1043,7 @@ def main(
                                 console.print(f"[bold red]  [FAIL] Notification error:[/] {'; '.join(err_details) if err_details else 'Failed to deliver'}")
 
                 elif cmd == "/db":
-                    target_db = parts[1] if len(parts) > 1 else "brain/kuro.db"
+                    target_db = parts[1] if len(parts) > 1 else str(DB_PATH)
                     res = explore_database(target_db, op="list_tables")
                     if res.get("success"):
                         table = Table(title=f"Database Explorer: {target_db}", border_style="cyan", box=box.ROUNDED)
@@ -1395,16 +1396,8 @@ def main(
 
             # ── Autonomous Agent Mode ──────────────────────
             console.print()
-            response = None
-
-            with Live(
-                Spinner("dots2", text="[bold cyan]KURO is thinking...[/bold cyan]"),
-                refresh_per_second=12,
-                console=console,
-                transient=True,
-            ):
-                response = agent.run(user_input)
-
+            console.print("[bold cyan]KURO is thinking...[/]")
+            response = agent.run(user_input)
             print_kuro_response(response)
 
         except (KeyboardInterrupt, EOFError):

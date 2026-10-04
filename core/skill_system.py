@@ -18,7 +18,6 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from core.logger import logger
 from core.memory_types import ProceduralMemory, memory_manager
 from core.paths import SKILLS_DIR
 
@@ -106,8 +105,8 @@ class SkillSystem:
                                 data = json.load(f)
                             spec = SkillSpec(**data)
                             skills_map[spec.name] = spec
-                        except Exception as e:
-                            logger.error(f"Failed to load skill file '{json_file}'", {"error": str(e)})
+                        except Exception:
+                            pass
 
         # 2. Load from SQLite procedural memory
         try:
@@ -128,8 +127,8 @@ class SkillSystem:
                         success_count=pm.success_count,
                         failure_count=pm.failure_count,
                     )
-        except Exception as e:
-            logger.error("Failed to load skills from database", {"error": str(e)})
+        except Exception:
+            pass
 
         return list(skills_map.values())
 
@@ -181,7 +180,6 @@ class SkillSystem:
         # Persist to disk and DB
         spec.save_to_file()
         memory_manager.save_skill(spec.to_procedural_memory())
-        logger.info(f"Created new reusable skill '{name}' with {len(workflow_steps)} workflow steps.")
         return spec
 
     def record_execution_result(self, name: str, success: bool) -> None:

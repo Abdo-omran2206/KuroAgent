@@ -22,7 +22,6 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from core.logger import logger
 from core.paths import PROJECTS_DIR
 
 
@@ -114,7 +113,6 @@ class ProjectInspector:
             except Exception:
                 pass
 
-        logger.info(f"Building project profile for '{root_dir}'...")
         profile = ProjectProfile(str(root_dir))
 
         # Detect files and configs
@@ -129,8 +127,8 @@ class ProjectInspector:
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(profile.to_dict(), f, indent=2, ensure_ascii=False)
-        except Exception as e:
-            logger.error("Failed to cache project profile", {"error": str(e)})
+        except Exception:
+            pass
 
         return profile
 

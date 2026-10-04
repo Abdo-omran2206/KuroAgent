@@ -26,7 +26,6 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from core.permissions import RiskLevel, register_action_risk
-from core.logger import logger
 
 
 @dataclass
@@ -47,7 +46,6 @@ class ToolContract:
         try:
             return self.handler(**kwargs)
         except Exception as e:
-            logger.error(f"Error executing tool '{self.name}'", {"error": str(e)})
             return {"success": False, "error": f"Tool Execution Exception [{self.name}]: {str(e)}"}
 
 
@@ -64,7 +62,6 @@ class PluginRegistry:
         """Registers a ToolContract into the registry and updates risk policies."""
         self._tools[tool.name] = tool
         register_action_risk(tool.name, tool.risk_level)
-        logger.debug(f"Registered tool '{tool.name}' (plugin: {tool.plugin_name}, risk: {tool.risk_level.value})")
 
     def register_function(
         self,
@@ -159,9 +156,8 @@ class PluginRegistry:
                                 "status": "active",
                             }
                             loaded_count += 1
-                            logger.info(f"Loaded plugin '{p_name}' v{p_version}")
-                    except Exception as e:
-                        logger.error(f"Failed to load plugin from '{plugin_folder.name}'", {"error": str(e)})
+                    except Exception:
+                        pass
 
         return loaded_count
 

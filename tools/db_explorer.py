@@ -1,7 +1,8 @@
 import sqlite3
 import json
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict
+from tools.files import is_read_sql_query
 
 def explore_database(db_path: str, op: str = "list_tables", table_name: str = None, query: str = None) -> Dict[str, Any]:
     """
@@ -78,7 +79,7 @@ def explore_database(db_path: str, op: str = "list_tables", table_name: str = No
                 return {"success": False, "error": "query argument is required for query operation."}
 
             cursor.execute(query)
-            if query.strip().upper().startswith(("SELECT", "PRAGMA", "EXPLAIN")):
+            if is_read_sql_query(query):
                 rows = [dict(r) for r in cursor.fetchall()]
                 conn.close()
                 return {"success": True, "rows": rows, "count": len(rows)}

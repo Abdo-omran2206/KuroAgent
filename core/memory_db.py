@@ -14,10 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core import config
-
-BASE_DIR = config.BASE_DIR
-DB_DIR = config.BRAIN_DIR
-DB_PATH = DB_DIR / "kuro.db"
+from core.paths import APP_DIR as BASE_DIR, BRAIN_DIR as DB_DIR, DB_PATH
 
 
 @contextmanager

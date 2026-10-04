@@ -3,6 +3,14 @@
 *.env
 *.pem
 *.key
+config/vault.enc
+
+# SQLite Brain DB & User Notes
+brain/*.db
+brain/notes/*
+!brain/notes/.gitkeep
+projects/*.json
+!projects/.gitkeep
 
 # Python Bytecode & Cache
 __pycache__/
@@ -13,6 +21,7 @@ __pycache__/
 # KURO History & Logs
 .kuro_history
 memory.json
+logs/
 *.log
 
 # PyInstaller Build & Dist Artifacts

@@ -20,7 +20,6 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from core import config
-from core.logger import logger
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -169,7 +168,6 @@ class ModelRouter:
             else:
                 model = config.get_active_model(provider)
 
-        logger.debug(f"Routed task [{task_type.value}] -> Provider: {provider}, Model: {model}")
         return provider, model, task_type
 
 

@@ -4,6 +4,7 @@ import urllib.request
 import urllib.parse
 import subprocess
 from typing import Dict, Any, List, Optional
+from tools.web import DEFAULT_HTTP_HEADERS
 
 def browse_web_headless(url: str, extract_links: bool = True) -> Dict[str, Any]:
     """
@@ -13,11 +14,7 @@ def browse_web_headless(url: str, extract_links: bool = True) -> Dict[str, Any]:
     if not url.startswith("http://") and not url.startswith("https://"):
         url = "https://" + url
 
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5"
-    }
+    headers = DEFAULT_HTTP_HEADERS
 
     try:
         req = urllib.request.Request(url, headers=headers)

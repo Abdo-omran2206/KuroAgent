@@ -101,8 +101,7 @@ def save_notification_config(config_data: Dict[str, Any]) -> bool:
         if config_data.get("slack_webhook"):
             vault.set_secret("SLACK_WEBHOOK_URL", config_data["slack_webhook"], description="Slack Webhook URL")
         return True
-    except Exception as e:
-        logger.error(f"[Notifier] Failed to save config: {e}")
+    except Exception:
         return False
 
 

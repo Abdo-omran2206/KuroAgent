@@ -19,8 +19,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
-from core.logger import logger
-
 
 class BaseAgent(ABC):
     """Base interface for all specialized agents."""
@@ -107,7 +105,6 @@ class AgentOrchestrator:
         agent = self._agents.get(agent_name.lower())
         if not agent:
             return {"success": False, "error": f"Specialized agent '{agent_name}' not found."}
-        logger.info(f"Orchestrator delegating to '{agent.name}'...")
         return agent.run_task(prompt, context)
 
 
