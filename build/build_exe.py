@@ -29,7 +29,7 @@ def build_standalone_exe():
     # PyInstaller flags (--onedir strategy for modular production distribution)
     cmd = [
         sys.executable, "-m", "PyInstaller",
-        "--name=KURO",
+        "--name=KuroCode",
         "--onedir",
         "--console",
         f"--icon={icon_path}",
@@ -52,8 +52,8 @@ def build_standalone_exe():
     res = subprocess.run(cmd, cwd=str(base_dir))
 
     if res.returncode == 0:
-        dist_dir = base_dir / "dist" / "KURO"
-        exe_path = dist_dir / "KURO.exe"
+        dist_dir = base_dir / "dist" / "KuroCode"
+        exe_path = dist_dir / "KuroCode.exe"
         print("\n" + "=" * 60)
         print(" BUILD SUCCESSFUL!")
         print(f" Directory Application Location: {dist_dir}")
